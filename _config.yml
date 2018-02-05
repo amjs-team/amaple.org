@@ -14,7 +14,7 @@ timezone: Asia/Shanghai
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
 url: https://amaple.org
 root: /
-permalink: :year/:month/:day/:title/
+permalink: :title/
 permalink_defaults:
 
 # Directory
@@ -39,9 +39,9 @@ relative_link: false
 future: true
 highlight:
   enable: true
-  line_number: true
+  line_number: false
   auto_detect: false
-  tab_replace:
+  tab_replace: 
   
 # Home page setting
 # path: Root path for your blogs index page. (default = '')
@@ -72,7 +72,8 @@ pagination_dir: page
 # Extensions
 ## Plugins: https://hexo.io/plugins/
 ## Themes: https://hexo.io/themes/
-theme: landscape
+# theme: cactus-dark
+theme: amaple
 
 # Deployment
 ## Docs: https://hexo.io/docs/deployment.html

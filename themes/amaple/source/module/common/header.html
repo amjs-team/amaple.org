@@ -1,0 +1,60 @@
+<module>
+	<template>
+		<div class="header-wrap">
+			<ul>
+				<li class="menu"><a class="title-color" href="">关注Amaple</a></li>
+				<li class="menu"><a class="title-color" href="">加入Amaple</a></li>
+				<li class="menu"><a class="title-color" href="">文档</a></li>
+				<li id="icon-am">
+					<a href=""><img src="images/icon-amaple.png"></a>
+				</li>
+				<li class="menu"><a class="title-color" href="">API</a></li>
+				<li class="menu"><a class="title-color" href="">Amaple服务提供</a></li>
+				<li class="menu"><a class="title-color" href="">交流</a></li>
+			</ul>
+			<div id="lang-sel">
+				<img src="images/icon-lang.png">
+				<span >简体中文</span>
+			</div>
+		</div>
+	</template>
+
+	<script type="text/javascript">
+		new am.Module ();
+	</script>
+
+	<style scoped>
+		.header-wrap {
+			position: relative;
+		}
+		ul {
+			width: 70%;
+			margin: 20px auto;
+			overflow: hidden;
+		}
+		ul li {
+			margin: 0 4%;
+			float: left;
+		}
+		#icon-am img {
+			width: 42px;
+		}
+		.menu {
+			font-weight: bold;
+			padding-top: 20px;
+		}
+		#lang-sel {
+			position: absolute;
+			right: 5%;
+			top: 16px;
+		}
+		#lang-sel img {
+			width: 18px;
+			margin-right: 8px;
+			vertical-align: middle;
+		}
+		#lang-sel span {
+			font-size: 13px;
+		}
+	</style>
+</module>

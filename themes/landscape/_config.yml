@@ -35,3 +35,9 @@ twitter:
 google_plus:
 fb_admins:
 fb_app_id:
+
+customize:
+  social_links:
+    github: https://github.com/amjs-team/amaple
+    twitter: your-twitter-url
+    NAME: your-NAME-url

@@ -1,0 +1,22 @@
+
+# html lang
+language: zh-cn
+
+# main menu navigation
+menu:
+  Home: /
+  About: /about
+  Contact: /contact
+  Archives: /archives
+
+# Miscelaneous
+favicon: /favicon.ico
+
+# stylesheets loaded in the <head>
+stylesheets:
+- /css/reset.css
+- /css/amaple.css
+
+# scripts loaded in the end of the body
+scripts:
+- /lib/amaple/amaple.js
