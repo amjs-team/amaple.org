@@ -40,7 +40,7 @@ am.class ( "AmBtn" ).extends ( am.Component ) ( {
 			".am-btn img": {
 				width: this.state.imgWidth,
 				"margin": "0 5px",
-				"vertical-align": -5,
+				"vertical-align": -6,
 			}
 		} );
 	},

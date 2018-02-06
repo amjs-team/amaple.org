@@ -1,7 +1,12 @@
 <module>
 	<template>
-		<div>
-			footer
+		<div class="footer-wrap">
+			<a href="https://github.com/amjs-team/amaple/issues">提交issue</a>
+			<a href="#">联系Amaple-Team</a>
+			<a href="https://github.com/amjs-team/amaple">贡献代码</a>
+			<div id="copyright">
+				<span>Copyright © 2018-{{ new Date ().getFullYear () }} Amjs-Team</span>
+			</div>
 		</div>
 	</template>
 
@@ -10,6 +15,16 @@
 	</script>
 
 	<style scoped>
-		
+		.footer-wrap {
+			margin: 110px 0 50px 0;
+			text-align: center;
+		}
+		.footer-wrap a {
+			margin: 0 20px;
+			color: #78808a;
+		}
+		#copyright {
+			margin-top: 10px;
+		}
 	</style>
 </module>

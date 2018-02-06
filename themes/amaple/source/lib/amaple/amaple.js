@@ -681,7 +681,7 @@ extend(check.prototype, {
 
 
     /**
-           prior ( priorCb:Function )
+           prior ( priorCb:Function )
        
            Return Type:
            Object(check)
@@ -3903,13 +3903,13 @@ var rules = {
 			value = value.toLowerCase();
 
 			return function (elem) {
-				var attr = elem.attr(name);
+				var attr = elem.nodeType === 1 && elem.attr(name);
 				return attr !== undefined && (attr.length === len || attr.charAt(len) === "-") && attr.substr(0, len).toLowerCase() === value && next(elem);
 			};
 		}
 
 		return function (elem) {
-			var attr = elem.attr(name);
+			var attr = elem.nodeType === 1 && elem.attr(name);
 			return attr !== undefined && attr.substr(0, len) === value && (attr.length === len || attr.charAt(len) === "-") && next(elem);
 		};
 	},
@@ -3935,7 +3935,7 @@ var rules = {
 	exists: function exists(next, data) {
 		var name = data.name;
 		return function (elem) {
-			return elem.attrs.hasOwnProperty(name) && next(elem);
+			return elem.nodeType === 1 && elem.attrs.hasOwnProperty(name) && next(elem);
 		};
 	},
 	start: function start(next, data) {
@@ -3951,13 +3951,13 @@ var rules = {
 			value = value.toLowerCase();
 
 			return function (elem) {
-				var attr = elem.attr(name);
+				var attr = elem.nodeType === 1 && elem.attr(name);
 				return attr !== undefined && attr.substr(0, len).toLowerCase() === value && next(elem);
 			};
 		}
 
 		return function (elem) {
-			var attr = elem.attr(name);
+			var attr = elem.nodeType === 1 && elem.attr(name);
 			return attr !== undefined && attr.substr(0, len) === value && next(elem);
 		};
 	},
@@ -3974,13 +3974,13 @@ var rules = {
 			value = value.toLowerCase();
 
 			return function (elem) {
-				var attr = elem.attr(name);
+				var attr = elem.nodeType === 1 && elem.attr(name);
 				return attr !== undefined && attr.substr(len).toLowerCase() === value && next(elem);
 			};
 		}
 
 		return function (elem) {
-			var attr = elem.attr(name);
+			var attr = elem.nodeType === 1 && elem.attr(name);
 			return attr !== undefined && attr.substr(len) === value && next(elem);
 		};
 	},
@@ -3996,13 +3996,13 @@ var rules = {
 			var regex = new RegExp(value.replace(rChars, "\\$&"), "i");
 
 			return function (elem) {
-				var attr = elem.attr(name);
+				var attr = elem.nodeType === 1 && elem.attr(name);
 				return attr !== undefined && regex.test(attr) && next(elem);
 			};
 		}
 
 		return function (elem) {
-			var attr = elem.attr(name);
+			var attr = elem.nodeType === 1 && elem.attr(name);
 			return attr !== undefined && attr.indexOf(value) >= 0 && next(elem);
 		};
 	},
@@ -4012,19 +4012,19 @@ var rules = {
 
 		if (value === "") {
 			return function (elem) {
-				return !!elem.attr(name) && next(elem);
+				return elem.nodeType === 1 && !!elem.attr(name) && next(elem);
 			};
 		} else if (data.ignoreCase) {
 			value = value.toLowerCase();
 
 			return function (elem) {
-				var attr = elem.attr(name);
+				var attr = elem.nodeType === 1 && elem.attr(name);
 				return attr !== undefined && attr.toLowerCase() !== value && next(elem);
 			};
 		}
 
 		return function (elem) {
-			return elem.attr(name) !== value && next(elem);
+			return elem.nodeType === 1 && elem.attr(name) !== value && next(elem);
 		};
 	}
 };
@@ -4436,6 +4436,51 @@ function stringToScopedVNode(htmlString, styles) {
 function buildPlugin(pluginDef, context, deps) {
 	deps = cache.getDependentPlugin(deps || pluginDef.build);
 	cache.pushPlugin(pluginDef.name, pluginDef.build.apply(context, deps));
+}
+
+/**
+	trimHTML ( htmlString: String )
+
+	Return Type:
+	String
+	去除空格后的html字符串
+
+	Description:
+	去除html标签间的空格与回车
+	<pre>内的标签不会被处理
+
+	URL doc:
+	http://amaple.org/######
+*/
+function trimHTML(htmlString) {
+
+	// 表达式1：匹配<pre>/</pre>标签来确定是否在<pre>标签内
+	// 表达式2：匹配两个标签间的空格
+	// 表达式3：匹配换行及后续空格，防止双花括号为vnode时嵌入失败
+	var rpreAndBlank = /\s*(\/\s*)?pre\s*|>(\s+)</ig;
+	var inPreNum = 0;
+
+	return htmlString.replace(rpreAndBlank, function (match, rep1, rep2) {
+		if (match.indexOf("pre") > -1) {
+			if (rep1 === undefined) {
+				inPreNum++;
+				return match;
+			} else if (rep1.substr(0, 1) === "/" && inPreNum > 0) {
+				inPreNum--;
+				return match;
+			}
+		} else {
+			if (inPreNum > 0) {
+				return match;
+			} else {
+				if (match.substr(0, 1) === ">") {
+					return match.replace(rep2, "");
+				} else {
+					return "";
+				}
+			}
+		}
+	});
 }
 
 /**
@@ -5574,9 +5619,6 @@ function parseModuleAttr(moduleString, parses) {
 */
 function parseTemplate(moduleString, parses) {
 	var rtemplate = /<template>([\s\S]+)<\/template>/i,
-	    rblank = />(\s+)</g,
-	    rtext = /"/g,
-	    rwrap = /\r?\n\s*/g,
 	    viewMatch = rtemplate.exec(moduleString);
 
 	var view = void 0;
@@ -5584,16 +5626,8 @@ function parseTemplate(moduleString, parses) {
 		moduleString = moduleString.replace(viewMatch[0], "");
 		view = (viewMatch[1] || "").trim();
 
-		// 去除所有标签间的空格，并将"转换为'符号
-		view = view.replace(rblank, function (match, rep) {
-			return match.replace(rep, "");
-		}).replace(rtext, function (match) {
-			return "'";
-		}).replace(rwrap, function (match) {
-			return "";
-		});
-
-		parses.view = view;
+		// 去除所有标签间的空格
+		parses.view = trimHTML(view);
 	}
 
 	return moduleString;
@@ -7462,7 +7496,7 @@ extend(Subscriber.prototype, {
 
 
     /**
-        notify ()
+        notify ()
     
         Return Type:
         void
@@ -8000,15 +8034,9 @@ var componentConstructor = {
         http://amaple.org/######
     */
     initTemplate: function initTemplate(template, scopedStyle) {
-        var rblank = />(\s+)</g,
-            rwrap = /\r?\n\s*/g;
 
-        // 去除所有标签间的空格，并转义"和'符号
-        template = template.replace(rblank, function (match, rep) {
-            return match.replace(rep, "");
-        }).replace(rwrap, function (match) {
-            return "";
-        });
+        // 去除所有标签间的空格
+        template = trimHTML(template.trim());
 
         // 为对应元素添加内嵌样式
         var num = void 0,
@@ -8017,8 +8045,8 @@ var componentConstructor = {
         foreach(scopedStyle, function (styles, selector) {
             styleString = "";
             foreach(styles, function (val, styleName) {
-                num = parseInt(val);
-                styleString += styleName + ":" + (val + (type$1(num) === "number" && (num >= 0 || num <= 0) && num.toString () === val.toString () && noUnitHook.indexOf(styleName) === -1 ? "px" : "")) + ";";
+                num = window.parseInt(val);
+                styleString += styleName + ":" + (val + (type$1(num) === "number" && (num >= 0 || num <= 0) && num.toString() === val.toString() && noUnitHook.indexOf(styleName) === -1 ? "px" : "")) + ";";
             });
 
             styleObject.push({ selector: selector, content: styleString });
@@ -9101,7 +9129,7 @@ var textExpr = {
             });
 
             // 当组件设置了subElements，且在模板中在同一个文本节点连续输出两个subElements，或subElements与普通文本一起使用时，需按subElements进行分割，然后遍历插入其中
-            this.expr = "(function(arr){\n                var arr=arr,tempArr=[],ret=[];\n                for(var i=0;i<arr.length;i++){\n                    if(!arr[i].nodeType){\n                        tempArr.push(arr[i]);\n                    }\n                    else{\n                        ret.push(tempArr.join(\"\"),arr[i]);\n                        tempArr=[];\n                    }\n                }\n                if(tempArr.length>0) {\n                    ret.push(tempArr.join(\"\"));\n                }\n                return ret.length===1?ret[0]:ret;\n            })([\"" + exprArray + "\"])";
+            this.expr = "(function(arr){\n                var arr=arr,tempArr=[],ret=[];\n                for(var i=0;i<arr.length;i++){\n                    if(!arr[i]||!arr[i].nodeType){\n                        tempArr.push(arr[i]);\n                    }\n                    else{\n                        ret.push(tempArr.join(\"\"),arr[i]);\n                        tempArr=[];\n                    }\n                }\n                if(tempArr.length>0) {\n                    ret.push(tempArr.join(\"\"));\n                }\n                return ret.length===1?ret[0]:ret;\n            })([\"" + exprArray + "\"])";
         }
     },
 
@@ -9132,13 +9160,16 @@ var textExpr = {
                 node.nodeValue = val;
             }
         } else {
-            var p = node.parent;
-            p.clear();
-
+            var f = VFragment();
             foreach(val, function (item) {
-                item = item.nodeType ? item : VTextNode(item);
-                p.appendChild(item);
+                if (item.nodeType) {
+                    f.appendChild(item);
+                } else if (type$1(item) === "string" && item.trim()) {
+                    f.appendChild(VTextNode(item));
+                }
             });
+
+            node.parent.replaceChild(f, node);
         }
     }
 };

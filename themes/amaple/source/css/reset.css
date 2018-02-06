@@ -21,10 +21,9 @@ body,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,code,form,fieldset,legend,input,tex
 	padding:0;
 }
 body {
-	font-family: '微软雅黑';
-	font-size: 15px;
+	font-family: "微软雅黑";
+	font-size: 14px;
 	overflow-x: hidden;
-	background-color: white;
 }
 table {
 	border-collapse:collapse;

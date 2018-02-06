@@ -48,9 +48,80 @@
 			<div id="am-sample">
 				<ul>
 					<li>
-						
+						<div class="code">
+							<pre>
+								<code class="html hljs xml">
+<span class="hljs-tag"><<span class="hljs-name">module</span> <span class="hljs-attr">:title</span>=<span class="hljs-string">"Amaple.js"</span>></span>
+  <span class="hljs-tag"><<span class="hljs-name">template</span>></span>
+    <span class="hljs-tag"><<span class="hljs-name">span</span>></span>{{<span> </span>greet<span> </span>}}<span class="hljs-tag"></<span class="hljs-name">span</span>></span>
+  <span class="hljs-tag"></<span class="hljs-name">template</span>></span>
+  <span class="hljs-tag"><<span class="hljs-name">script</span>></span><span class="javascript">
+    <span class="hljs-keyword">new</span> am.Module ({
+      <span class="hljs-attr">init</span>: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+        <span class="hljs-keyword">return</span> { <span class="hljs-attr">greet</span>: <span class="hljs-string">"hello Amaple"</span> };
+      }
+    });
+  </span><span class="hljs-tag"></<span class="hljs-name">script</span>></span>
+<span class="hljs-tag"></<span class="hljs-name">module</span>></span>
+								</code>
+							</pre>
+						</div>
+						<div class="sample-desc">
+							<h2 class="title-color title-size">编写一个简单的模块</h2>
+							<p>而且允许开发者定义任意层级的任意多个模块及子模块。在 <code><\module></code> 中通过<code>:title</code>属性设置模块标题，并且使用简单的<code>{{ }}</code>对DOM数据进行动态绑定。</p>
+						</div>
+					</li>
+					<li>
+						<div class="code">
+							<pre>		
+<code class="javascript hljs">
+<span class="hljs-keyword">var</span> AmComp = am.class (<span class="hljs-string">"AmComp"</span>).extends (am.Component) ({
+  <span class="hljs-attr">render</span>: <span class="hljs-function"><span class="hljs-keyword">function</span> (<span class="hljs-params"></span>) </span>{
+    <span class="hljs-keyword">this</span>.template (<span class="hljs-string">`</span><span class="intro"><span class="hljs-string">I'm Amaple</span></span><span class="hljs-string">`</span>)
+    .style ({
+      <span class="hljs-string">".intro"</span>: { <span class="hljs-attr">color</span>: <span class="hljs-keyword">this</span>.props.color }
+    });
+  }
+});
+</code>
+							</pre>
+							<pre>
+								<code class="html hljs xml">
+<span class="hljs-comment"><span><</span>!-- 在模块的template节点中使用 AmComp 组件 --></span>
+<span class="hljs-tag"><<span class="hljs-name">am-comp</span> <span class="hljs-attr">color</span>=<span class="hljs-string">"#FFD39B"</span>></span><span class="hljs-tag"></<span class="hljs-name">am-comp</span>></span>
+								</code>
+							</pre>
+						</div>
+						<div class="sample-desc">
+							<h2 class="title-color title-size">编写一个简单的组件</h2>
+							<p>组件是拥有特定功能的封装块，就像由一堆代码封装成的具有特定功能的函数一样，一个组件有独立的视图、行为及生命周期。<code>am.class</code>用于ES5的类构造，在ES6版本下，你完全可以使用<code>class AmComp extends am.Component</code>替代它。</p>
+						</div>
+					</li>
+					<li>
+						<div class="code">
+							<pre>
+								<code class="html hljs xml">
+<span class="hljs-comment"><span><</span>!-- 模块跳转更新 --></span>
+<span class="hljs-tag"><<span class="hljs-name">a</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"aboutAmjs"</span>></span>关于Amaple<span class="hljs-tag"></<span class="hljs-name">a</span>></span>
+
+<span class="hljs-comment"><span><</span>!-- 表单提交 --></span>
+<span class="hljs-tag"><<span class="hljs-name">form</span> <span class="hljs-attr">action</span>=<span class="hljs-string">"save_email"</span> <span class="hljs-attr">method</span>=<span class="hljs-string">"action"</span>></span>
+  <span class="hljs-tag"><<span class="hljs-name">input</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"text"</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"email"</span> /></span>
+  <span class="hljs-tag"><<span class="hljs-name">input</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"file"</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"photo"</span> /></span>
+<span class="hljs-tag"></<span class="hljs-name">form</span>></span>
+								</code>
+							</pre>
+						</div>
+						<div class="sample-desc">
+							<h2 class="title-color title-size">模块跳转与表单提交</h2>
+							<p>看上去是不是非常眼熟？Amaple的模块跳转就是这么简单，只要<code>href</code>属性和<code>form元素</code>的<code>action</code>的路径能在路由配置中找到，它就会进行无刷新跳转。并且当表单中使用上传图片时，你也不需要设置<code>enctype="multipart/form-data"</code>。</p>
+						</div>
 					</li>
 				</ul>
+			</div>
+			<div id="try-now">
+				<h2 class="title-color title-size">有空的话，现在就试试吧！</h2>
+				<am-btn img="images/icon-book.png" imgWidth="18" type="fill" leftBg="#fb9e41" rightBg="#fb7939">开始学习</am-btn>
 			</div>
 		</div>
 	</template>
@@ -115,8 +186,25 @@
 			margin-right: 2%;
 			float: left;
 		}
-		#am-feature h2 {
-			margin-bottom: 20px;
+		#am-sample {
+			margin-top: 100px;
+			overflow: hidden;
+		}
+		.code {
+			width: 60%;
+			float: left;
+		}
+		.sample-desc {
+			width: 35%;
+			float: right;
+			margin-top: 30px;
+		}
+		#try-now {
+			margin-top: 85px;
+			text-align: center;
+		}
+		#try-now h2 {
+			margin-bottom: 35px;
 		}
 	</style>
 </module>
