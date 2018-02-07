@@ -2,26 +2,11 @@
 	<template>
 		<div class="header-wrap {{ bgClass }}">
 			<ul>
-				<li class="menu">
-					<a href="/" class="title-color">关注Amaple</a>
+				<li class="menu" :for="(item, key) in nav" :if="key !== 'home'">
+					<a href="{{ item }}" class="title-color">{{ key }}</a>
 				</li>
-				<li class="menu">
-					<a href="/" class="title-color">加入Amaple</a>
-				</li>
-				<li class="menu">
-					<a href="/" class="title-color">文档</a>
-				</li>
-				<li id="icon-am">
+				<li id="icon-am" :else>
 					<a href="/"><img src="images/icon-amaple.png"></a>
-				</li>
-				<li class="menu">
-					<a href="/" class="title-color">API</a>
-				</li>
-				<li class="menu">
-					<a href="/" class="title-color">Amaple服务提供</a>
-				</li>
-				<li class="menu">
-					<a href="/" class="title-color">交流</a>
 				</li>
 			</ul>
 			<div id="lang-sel">
@@ -37,8 +22,9 @@
 
 	<script type="text/javascript">
 		new am.Module ( {
-			init: function () {
+			init: function ( nav ) {
 				return {
+					nav: nav,
 					bgClass: "",
 					changeLocale: function ( e ) {
 						console.log ( e.target.value );
@@ -102,16 +88,17 @@
 			position: relative;
 		}
 		ul {
-			width: 70%;
 			margin: 20px auto;
 			overflow: hidden;
+			text-align: center;
 		}
 		ul li {
 			margin: 0 4%;
-			float: left;
+			display: inline-block;
 			font-size: 15px;
 		}
 		#icon-am img {
+			vertical-align: -19px;
 			width: 42px;
 		}
 		.menu {

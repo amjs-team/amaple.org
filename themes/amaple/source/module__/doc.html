@@ -1,0 +1,29 @@
+<module>
+	<template>
+		<div class="doc-wrap">
+			<div class="menu" :module="menu"></div>
+			<div class="main" :module></div>
+		</div>
+	</template>
+
+	<script>
+		new am.Module ();
+	</script>
+
+	<style scoped>
+		.doc-wrap {
+			width: 80%;
+			margin: 0 auto;
+			margin-top: 200px;
+			overflow: hidden;
+		}
+		.menu {
+			width: 30%;
+			float: left;
+		}
+		.main {
+			width: 65%;
+			float: right;
+		}
+	</style>
+</module>

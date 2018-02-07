@@ -1,0 +1,28 @@
+<module>
+	<template>
+		<div>
+			<h2>当前目录</h2>
+			<ul>
+				<li :for="item in list">{{ item }}</li>
+			</ul>
+		</div>
+		<div>
+			
+		</div>
+	</template>
+
+	<script>
+		new am.Module ( {
+			init: function ( event ) {
+				var list = event.emit ( "deliverToc" );
+				console.log( list );
+				return {
+					list: list || []
+				};
+			}
+		} );
+	</script>
+
+	<style scoped>
+	</style>
+</module>

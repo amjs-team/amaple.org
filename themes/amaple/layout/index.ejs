@@ -36,27 +36,32 @@ pageTitle += ' [ ' + config.title + ' ]';
   am.startRouter ( {
     history: am.HASH,
     baseURL: {
-      module: "module",
-      component: "component"
+      module: "module__",
+      component: "component__"
     },
     routes: function ( router ) {
       router.module ( "header" )
       .route ( ["/", "/:root"], "common/header" );
 
       router.module ()
-      .route ( ["/", "/index"], "index" );
+      .route ( ["/", "/index"], "index" )
+      .route ( "/doc", "doc", function ( childRouter ) {
+        childRouter.module ().defaultRoute ( "hello-world/index" );
+        childRouter.module ( "menu" ).route ( ["", ":menu"], "common/menu" );
+      } );
 
       router.module ( "footer" )
       .route ( ["/", "/:root"], "common/footer" );
     },
 
     plugin: [
-      { name: "sampleCode", build: function () {
-        return {
-          code: [],
+      {
+        name: "nav", 
+        build: function () {
+          return <%-JSON.stringify ( theme.menu ) %>;
         }
-      } }
-    ]
+      },
+    ] 
   } );
 </script>
 </html>

@@ -2,8 +2,10 @@
 title: Hello World
 ---
 # index
-```html
-<module>
-	<span>555</span>
-</module>
+```javascript
+var a = 1;
+function aa () {
+	return a;
+}
+aa();
 ```

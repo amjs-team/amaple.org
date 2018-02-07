@@ -1133,7 +1133,7 @@ var event = {
 		var _this2 = this;
 
 		// 纠正参数
-		correctParam(elem, types, listener, useCapture).to("object", "string").done(function () {
+		correctParam(elem, types, listener, useCapture).to(["object", "undefined"], "string").done(function () {
 			elem = this.$1;
 			types = this.$2;
 			listener = this.$3;
@@ -1199,7 +1199,7 @@ var event = {
 		var _this3 = this;
 
 		// 纠正参数
-		correctParam(elem, types, listener, useCapture).to("object", "string").done(function (args) {
+		correctParam(elem, types, listener, useCapture).to(["object", "undefined"], "string").done(function (args) {
 			elem = args[0];
 			types = args[1];
 			listener = args[2];
@@ -1261,7 +1261,7 @@ var event = {
 		var _this4 = this;
 
 		// 纠正参数
-		var args = correctParam(elem, types).to("object", "string").done(function () {
+		var args = correctParam(elem, types).to(["object", "undefined"], "string").done(function () {
 			elem = this.$1;
 			types = this.$2;
 		});
@@ -4456,7 +4456,6 @@ function trimHTML(htmlString) {
 
 	// 表达式1：匹配<pre>/</pre>标签来确定是否在<pre>标签内
 	// 表达式2：匹配两个标签间的空格
-	// 表达式3：匹配换行及后续空格，防止双花括号为vnode时嵌入失败
 	var rpreAndBlank = /\s*(\/\s*)?pre\s*|>(\s+)</ig;
 	var inPreNum = 0;
 
@@ -4473,11 +4472,7 @@ function trimHTML(htmlString) {
 			if (inPreNum > 0) {
 				return match;
 			} else {
-				if (match.substr(0, 1) === ">") {
-					return match.replace(rep2, "");
-				} else {
-					return "";
-				}
+				return match.replace(rep2, "");
 			}
 		}
 	});
@@ -10195,7 +10190,7 @@ extend(ModuleLoader, {
 					moduleNode.render();
 				}
 
-				historyModule.updateFn(am, {
+				historyModule.updateFn(core, {
 					moduleNode: moduleNode,
 					moduleFragment: historyModule.updateFn.moduleFragment.clone(),
 					NodeTransaction: NodeTransaction,
@@ -10252,7 +10247,7 @@ extend(ModuleLoader, {
 						moduleNode[identifierName] = moduleIdentifier;
 					}
 
-					updateFn(am, {
+					updateFn(core, {
 						moduleNode: moduleNode,
 						moduleFragment: updateFn.moduleFragment.clone(),
 						NodeTransaction: NodeTransaction,
@@ -11005,7 +11000,7 @@ function install(pluginDef) {
 	foreach(pluginBuilder.buildings, function (building) {
 		if (building.url === path) {
 			building.install = function () {
-				buildPlugin(pluginDef, am);
+				buildPlugin(pluginDef, core);
 			};
 			find = true;
 		}
@@ -11014,7 +11009,7 @@ function install(pluginDef) {
 	// 没有找到需安装插件时直接安装此插件
 	// 用于普通模式下安装插件
 	if (!find) {
-		buildPlugin(pluginDef, am);
+		buildPlugin(pluginDef, core);
 	}
 }
 
@@ -11258,7 +11253,24 @@ function startRouter(routerConfig) {
 	}, TYPE_PLUGIN, callbacks);
 }
 
-var am = {
+// 创建插件
+cache.pushPlugin("util", { type: type$1, foreach: foreach, isEmpty: isEmpty, isPlainObject: isPlainObject, guid: guid });
+cache.pushPlugin("event", {
+	on: function on(types, listener, once) {
+		event.on(undefined, types, listener, false, once);
+	},
+	remove: function remove(types, listener) {
+		event.remove(undefined, types, listener, false);
+	},
+	emit: function emit(types) {
+		event.emit(undefined, types);
+	}
+});
+cache.pushPlugin("http", http);
+cache.pushPlugin("Promise", Promise);
+
+// 导出amaple主对象
+var core = {
 
 	// 路由模式，启动路由时可进行模式配置
 	// 默认为自动选择路由模式，即在支持html5 history API时使用新特性，不支持的情况下自动回退到hash模式
@@ -11288,6 +11300,6 @@ var am = {
 	install: install
 };
 
-return am;
+return core;
 
 })));

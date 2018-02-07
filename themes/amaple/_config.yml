@@ -4,20 +4,23 @@ language: zh-cn
 
 # main menu navigation
 menu:
-  Home: /
-  About: /about
-  Contact: /contact
-  Archives: /archives
+  # Follow: /follow
+  Join: /join
+  Document: /doc
+  home: /
+  API: /api
+  # Service: /service
+  Communication: /communication
 
 # Miscelaneous
 favicon: /favicon.ico
 
 # stylesheets loaded in the <head>
 stylesheets:
-- /css/reset.css
-- /css/amaple.css
-- http://cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.12.0/build/styles/rainbow.min.css
+  - /css/reset.css
+  - /css/amaple.css
+  - http://cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.12.0/build/styles/rainbow.min.css
 
 # scripts loaded in the end of the body
 scripts:
-- /lib/amaple/amaple.js
+  - /lib/amaple/amaple.js

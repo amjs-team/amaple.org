@@ -1,6 +1,12 @@
-<article id="post">
-  <h1><%=page.title%></h1>
-  <%-page.content%>
-</article>
-
-<%-paginator()%>
+<module :title="<%=page.title%>">
+	<template><%-page.content %></template>
+	<script>
+		new am.Module ( {
+			init: function ( event ) {
+				event.on ( "deliverToc", function () {
+					return [ "index", "index2" ];
+				} );
+			}
+		} );
+	</script>
+</module>
