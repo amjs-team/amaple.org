@@ -14,11 +14,81 @@
 	<script>
 		new am.Module ( {
 			init: function ( event ) {
-				var list = event.emit ( "deliverToc" );
-				console.log( list );
+				var obj = {};
+				event.emit ( "deliverToc", obj );
 				return {
-					list: list || []
+					list: obj.list || []
 				};
+			}
+		} );
+
+		const s = `
+		<ol class="am">
+			<li class="am-item am-level-1">
+				<a class="am-link" href="#index1"><span class="am-text">index1</span></a>
+				<ol class="am-child">
+					<li class="am-item am-level-2">
+						<a class="am-link" href="#index2"><span class="am-text">index2</span></a>
+					</li>
+					<li class="am-item am-level-2">
+						<a class="am-link" href="#index2-2"><span class="am-text">index2-2</span></a>
+						<ol class="am-child">
+							<li class="am-item am-level-3">
+								<a class="am-link" href="#index3"><span class="am-text">index3</span></a>
+								<ol class="am-child">
+									<li class="am-item am-level-4">
+										<a class="am-link" href="#index4"><span class="am-text">index4</span></a>
+										<ol class="am-child">
+											<li class="am-item am-level-5">
+												<a class="am-link" href="#index5"><span class="am-text">index5</span></a>
+												<ol class="am-child">
+													<li class="am-item am-level-6">
+														<a class="am-link" href="#index6"><span class="am-text">index6</span></a>
+													</li>
+												</ol>
+											</li>
+										</ol>
+									</li>
+								</ol>
+							</li>
+						</ol>
+					</li>
+				</ol>
+			</li>
+			<li class="am-item am-level-1">
+				<a class="am-link" href="#index1-1"><span class="am-text">_index1</span></a>
+			</li>
+		</ol>`;
+
+		var rol = /(\/\s*)?ol\s*|class="am-text">\s*(.*?)\s*</gi;
+		let list = [], currentHierarchy;
+		// let obj = [
+		// 	{ name: "index1", children: [
+		// 		{ name: "index2", children: [] },
+		// 		{ name: "index2-2", children: [
+		// 			{ name: "index3", children: [] },
+		// 		] },
+		// 	] }
+		// ]
+
+		return htmlString.replace ( rol, ( match, rep1, rep2 ) => {
+			if ( match.indexOf ( "ol" ) > -1 ) {
+				if ( rep1 === undefined ) {
+					currentHierarchy = 
+					return match;
+				}
+				else if ( rep1.substr ( 0, 1 ) === "/" && inOlNum > 0 ) {
+					inOlNum --;
+					return match;
+				}
+			}
+			else {
+				if ( inOlNum > 0 ) {
+					return match;
+				}
+				else {
+					return match.replace ( rep2, "" );
+				}
 			}
 		} );
 	</script>

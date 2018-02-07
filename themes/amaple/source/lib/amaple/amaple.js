@@ -922,6 +922,254 @@ extend(check, {
     }
 });
 
+var expando = "eventExpando" + Date.now();
+var special = {
+
+	// DOMContentLoaded事件的判断方式
+	DOMContentLoaded: function DOMContentLoaded() {
+		return !!document.addEventListener;
+	}
+};
+
+/**
+	handler ( e: EventObject )
+
+	Return Type:
+	void
+
+	Description:
+	所有事件绑定的回调函数
+	将根据事件触发DOM和事件类型调用相应真实的回调
+
+	URL doc:
+	http://amaple.org/######
+*/
+function handler(e, param) {
+	var _this = this;
+
+	var isNode = !isPlainObject(this);
+	var _listeners = !isNode ? cache.getEvent(e.type) : this[expando] ? this[expando][e.type] : [];
+
+	foreach(_listeners || [], function (listener) {
+		isNode ? listener.call(_this, e) : listener.apply(_this, param);
+
+		// 如果该回调函数只执行一次则移除
+		if (listener.once === true) {
+			handler.event.remove(_this, e.type, listener, listener.useCapture);
+		}
+	});
+}
+
+/**
+	Plugin event
+
+	Description:
+	事件绑定与事件触发对象
+	可在节点对象上绑定常规与自定义事件，也可无节点绑定事件，由event.emit(type)手动触发
+	常规事件一般在交互过程中触发，自定义事件需调用event.emit(elem, type)手动触发
+
+	URL doc:
+	http://amaple.org/######
+*/
+var event = {
+
+	/**
+ 	support ( eventType: String, elem?: DOMObject )
+ 
+ 	Return Type:
+ 	Boolean
+ 	是否支持type事件
+ 
+ 	Description:
+ 	判断元素是否支持指定事件
+ 
+ 	URL doc:
+ 	http://amaple.org/######
+ */
+	support: function support(eventType) {
+		var elem = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : document.createElement("div");
+
+		var support = void 0;
+
+		if (type$1(special[eventType]) === "function") {
+			support = special[eventType]();
+		} else {
+			eventType = "on" + eventType;
+			support = eventType in elem;
+
+			if (!support && elem.setAttribute) {
+				attr(elem, eventType, "");
+
+				support = type$1(elem[eventType]) === "function";
+				attr(elem, eventType, null);
+			}
+		}
+
+		return support;
+	},
+
+
+	/**
+ 	on ( elem?: DOMObject, types: String, listener: Function, useCapture?: Boolean, once?: Boolean )
+ 
+ 	Return Type:
+ 	void
+ 
+ 	Description:
+ 	以兼容模式绑定事件，当有多个绑定事件时触发后将顺序执行多个绑定事件
+ 	绑定事件的节点类型不为文本节点（nodeType = 3）或注释节点（nodeType = 8）
+ 	当在节点上绑定事件时，节点只绑定调用函数，而所有的事件绑定则存储在events私有对象上，节点对象上将保存对事件key的引用
+ 
+ 	URL doc:
+ 	http://amaple.org/######
+ */
+	on: function on(elem, types, listener, useCapture, once) {
+		var _this2 = this;
+
+		check(types).type("string").ifNot("function event.on:types", "types参数类型必须为string").do();
+		check(listener).type("function").ifNot("function event.on:listener", "listener参数类型必须为function").do();
+		if (elem) {
+			check(elem.nodeType).notBe(3).notBe(8).ifNot("function event.on:elem", "elem参数不能为文本节点或注释节点").do();
+		}
+
+		// 给监听回调添加guid，方便移除事件
+		if (!listener.guid) {
+			listener.guid = guid();
+		}
+
+		// 如果once为true，则该回调只执行一次
+		if (once === true) {
+			listener.once = once;
+			listener.useCapture = !!useCapture;
+		}
+
+		// 多个事件拆分绑定
+		(types || "").replace(rword, function (type) {
+
+			if (elem) {
+				elem[expando] = elem[expando] || {};
+				var events = elem[expando][type] = elem[expando][type] || [];
+
+				// 元素对象存在，且元素支持浏览器事件时绑定事件，以方便浏览器交互时触发事件
+				// 元素不支持时属于自定义事件，需手动调用event.emit()触发事件
+				// IE.version >= 9
+				if (elem && _this2.support(type, elem) && elem.addEventListener && events.length <= 0) {
+					handler.event = _this2;
+					elem.addEventListener(type, handler, !!useCapture);
+				}
+
+				// 避免绑定相同的事件函数
+				if (events.indexOf(listener) === -1) {
+					events.push(listener);
+				}
+			} else {
+				cache.pushEvent(type, listener);
+			}
+		});
+	},
+
+
+	/**
+ 	remove ( elem?: DOMObject, types: String, listener: Function, useCapture?: Boolean )
+ 
+ 	Return Type:
+ 	void
+ 
+ 	Description:
+ 	以兼容模式解绑事件，可一次解绑多个类型的事件
+ 
+ 	URL doc:
+ 	http://amaple.org/######
+ */
+	remove: function remove(elem, types, listener, useCapture) {
+		var _this3 = this;
+
+		if (elem) {
+			check(elem.nodeType).notBe(3).notBe(8).ifNot("function event.on:elem", "elem参数不能为文本节点或注释节点").do();
+		}
+		check(types).type("string").ifNot("function event.on:types", "types参数类型必须为string").do();
+		check(listener).type("function").ifNot("function event.on:listener", "listener参数类型必须为function").do();
+
+		var i = void 0,
+		    events = void 0;
+		(types || "").replace(rword, function (type) {
+			if (elem) {
+				events = elem[expando] && elem[expando][type] || [];
+			} else {
+				events = cache.getEvent(type) || [];
+			}
+
+			// 获取事件监听回调数组
+			i = events.length;
+			if (i > 0) {
+
+				// 符合要求则移除事件回调
+				while (--i > -1) {
+					if (events[i].guid === listener.guid) {
+						events.splice(i, 1);
+					}
+				}
+
+				// 如果该事件的监听回调为空时，则解绑事件并删除监听回调数组
+				if (events.length === 0) {
+					delete (elem ? elem[expando][type] : cache.getAllEvent()[type]);
+
+					if (elem && _this3.support(type, elem) && elem.removeEventListener) {
+						elem.removeEventListener(type, handler, !!useCapture);
+					}
+				}
+			}
+		});
+	},
+
+
+	/**
+ 	emit ( elem?: DOMObject, types: String, param: Array )
+ 
+ 	Return Type:
+ 	void
+ 
+ 	Description:
+ 	触发事件
+ 	并且在无elem下触发可传递额外参数
+ 
+ 	URL doc:
+ 	http://amaple.org/######
+ */
+	emit: function emit(elem, types, param) {
+		var _this4 = this;
+
+		if (elem) {
+			check(elem.nodeType).notBe(3).notBe(8).ifNot("function event.emit:elem", "elem参数不能为文本节点或注释节点").do();
+		}
+		check(types).type("string").ifNot("function event.emit:types", "types参数类型必须为string").do();
+
+		(types || "").replace(rword, function (t) {
+			if (elem && _this4.support(t, elem)) {
+				if (document.createEvent) {
+
+					// 使用createEvent创建事件
+					var eventType = void 0;
+					foreach(eventMap, function (v, k) {
+						if (v.indexOf(t) !== -1) {
+							eventType = k;
+						}
+					});
+					var e = document.createEvent(eventType || "CustomEvent");
+					e.initEvent(t, true, false);
+
+					elem.dispatchEvent(e);
+				}
+			} else {
+				handler.event = _this4;
+
+				// IE9下的call调用传入非引用类型的值时，函数内的this指针无效
+				handler.call({}, { type: t }, param);
+			}
+		});
+	}
+};
+
 var types = ["string", "number", "function", "boolean", "object", "null", "undefined", "array"];
 
 function correctParam() {
@@ -1028,274 +1276,6 @@ function correctParam() {
         }
     };
 }
-
-var expando = "eventExpando" + Date.now();
-var special = {
-
-	// DOMContentLoaded事件的判断方式
-	DOMContentLoaded: function DOMContentLoaded() {
-		return !!document.addEventListener;
-	}
-};
-
-/**
-	handler ( e: EventObject )
-
-	Return Type:
-	void
-
-	Description:
-	所有事件绑定的回调函数
-	将根据事件触发DOM和事件类型调用相应真实的回调
-
-	URL doc:
-	http://amaple.org/######
-*/
-function handler(e) {
-	var _this = this;
-
-	var _listeners = isPlainObject(this) ? cache.getEvent(e.type) : this[expando] ? this[expando][e.type] : [];
-
-	foreach(_listeners || [], function (listener) {
-		listener.call(_this, e);
-
-		// 如果该回调函数只执行一次则移除
-		if (listener.once === true) {
-			handler.event.remove(_this, e.type, listener, listener.useCapture);
-		}
-	});
-}
-
-/**
-	Plugin event
-
-	Description:
-	事件绑定与事件触发对象
-	可在节点对象上绑定常规与自定义事件，也可无节点绑定事件，由event.emit(type)手动触发
-	常规事件一般在交互过程中触发，自定义事件需调用event.emit(elem, type)手动触发
-
-	URL doc:
-	http://amaple.org/######
-*/
-var event = {
-
-	/**
- 	support ( eventType: String, elem?: DOMObject )
- 
- 	Return Type:
- 	Boolean
- 	是否支持type事件
- 
- 	Description:
- 	判断元素是否支持指定事件
- 
- 	URL doc:
- 	http://amaple.org/######
- */
-	support: function support(eventType) {
-		var elem = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : document.createElement("div");
-
-		var support = void 0;
-
-		if (type$1(special[eventType]) === "function") {
-			support = special[eventType]();
-		} else {
-			eventType = "on" + eventType;
-			support = eventType in elem;
-
-			if (!support && elem.setAttribute) {
-				attr(elem, eventType, "");
-
-				support = type$1(elem[eventType]) === "function";
-				attr(elem, eventType, null);
-			}
-		}
-
-		return support;
-	},
-
-
-	/**
- 	on ( elem?: DOMObject, types: String, listener: Function, useCapture?: Boolean, once?: Boolean )
- 
- 	Return Type:
- 	void
- 
- 	Description:
- 	以兼容模式绑定事件，当有多个绑定事件时触发后将顺序执行多个绑定事件
- 	绑定事件的节点类型不为文本节点（nodeType = 3）或注释节点（nodeType = 8）
- 	当在节点上绑定事件时，节点只绑定调用函数，而所有的事件绑定则存储在events私有对象上，节点对象上将保存对事件key的引用
- 
- 	URL doc:
- 	http://amaple.org/######
- */
-	on: function on(elem, types, listener, useCapture, once) {
-		var _this2 = this;
-
-		// 纠正参数
-		correctParam(elem, types, listener, useCapture).to(["object", "undefined"], "string").done(function () {
-			elem = this.$1;
-			types = this.$2;
-			listener = this.$3;
-			useCapture = this.$4;
-		});
-
-		check(types).type("string").ifNot("function event.on:types", "types参数类型必须为string").do();
-		check(listener).type("function").ifNot("function event.on:listener", "listener参数类型必须为function").do();
-		if (elem) {
-			check(elem.nodeType).notBe(3).notBe(8).ifNot("function event.on:elem", "elem参数不能为文本节点或注释节点").do();
-		}
-
-		// 给监听回调添加guid，方便移除事件
-		if (!listener.guid) {
-			listener.guid = guid();
-		}
-
-		// 如果once为true，则该回调只执行一次
-		if (once === true) {
-			listener.once = once;
-			listener.useCapture = !!useCapture;
-		}
-
-		// 多个事件拆分绑定
-		(types || "").replace(rword, function (type) {
-
-			if (elem) {
-				elem[expando] = elem[expando] || {};
-				var events = elem[expando][type] = elem[expando][type] || [];
-
-				// 元素对象存在，且元素支持浏览器事件时绑定事件，以方便浏览器交互时触发事件
-				// 元素不支持时属于自定义事件，需手动调用event.emit()触发事件
-				// IE.version >= 9
-				if (elem && _this2.support(type, elem) && elem.addEventListener && events.length <= 0) {
-					handler.event = _this2;
-					elem.addEventListener(type, handler, !!useCapture);
-				}
-
-				// 避免绑定相同的事件函数
-				if (events.indexOf(listener) === -1) {
-					events.push(listener);
-				}
-			} else {
-				cache.pushEvent(type, listener);
-			}
-		});
-	},
-
-
-	/**
- 	remove ( elem?: DOMObject, types: String, listener: Function, useCapture?: Boolean )
- 
- 	Return Type:
- 	void
- 
- 	Description:
- 	以兼容模式解绑事件，可一次解绑多个类型的事件
- 
- 	URL doc:
- 	http://amaple.org/######
- */
-	remove: function remove(elem, types, listener, useCapture) {
-		var _this3 = this;
-
-		// 纠正参数
-		correctParam(elem, types, listener, useCapture).to(["object", "undefined"], "string").done(function (args) {
-			elem = args[0];
-			types = args[1];
-			listener = args[2];
-			useCapture = args[3];
-		});
-
-		if (elem) {
-			check(elem.nodeType).notBe(3).notBe(8).ifNot("function event.on:elem", "elem参数不能为文本节点或注释节点").do();
-		}
-		check(types).type("string").ifNot("function event.on:types", "types参数类型必须为string").do();
-		check(listener).type("function").ifNot("function event.on:listener", "listener参数类型必须为function").do();
-
-		var i = void 0,
-		    events = void 0;
-		(types || "").replace(rword, function (type) {
-			if (elem) {
-				events = elem[expando] && elem[expando][type] || [];
-			} else {
-				events = cache.getEvent(type) || [];
-			}
-
-			// 获取事件监听回调数组
-			i = events.length;
-			if (i > 0) {
-
-				// 符合要求则移除事件回调
-				while (--i > -1) {
-					if (events[i].guid === listener.guid) {
-						events.splice(i, 1);
-					}
-				}
-
-				// 如果该事件的监听回调为空时，则解绑事件并删除监听回调数组
-				if (events.length === 0) {
-					delete (elem ? elem[expando][type] : cache.getAllEvent()[type]);
-
-					if (elem && _this3.support(type, elem) && elem.removeEventListener) {
-						elem.removeEventListener(type, handler, !!useCapture);
-					}
-				}
-			}
-		});
-	},
-
-
-	/**
- 	emit ( elem?: DOMObject, types: String )
- 
- 	Return Type:
- 	void
- 
- 	Description:
- 	触发事件
- 
- 	URL doc:
- 	http://amaple.org/######
- */
-	emit: function emit(elem, types) {
-		var _this4 = this;
-
-		// 纠正参数
-		var args = correctParam(elem, types).to(["object", "undefined"], "string").done(function () {
-			elem = this.$1;
-			types = this.$2;
-		});
-
-		if (elem) {
-			check(elem.nodeType).notBe(3).notBe(8).ifNot("function event.emit:elem", "elem参数不能为文本节点或注释节点").do();
-		}
-		check(types).type("string").ifNot("function event.emit:types", "types参数类型必须为string").do();
-
-		(types || "").replace(rword, function (t) {
-			if (elem && _this4.support(t, elem)) {
-				if (document.createEvent) {
-
-					// 使用createEvent创建事件
-					var eventType = void 0;
-					foreach(eventMap, function (v, k) {
-						if (v.indexOf(t) !== -1) {
-							eventType = k;
-						}
-					});
-					var e = document.createEvent(eventType || "CustomEvent");
-					e.initEvent(t, true, false);
-
-					elem.dispatchEvent(e);
-				}
-			} else {
-				handler.event = _this4;
-
-				// IE9下的call调用传入非引用类型的值时，函数内的this指针无效
-				handler.call({}, { type: t });
-			}
-		});
-	}
-};
 
 /**
 	query ( selector: String, context?: Object, all?: Boolean )
@@ -2425,6 +2405,18 @@ function supportCheck(nodeType, method) {
     }
 }
 
+var entitySymbol = {
+    lt: "<",
+    gt: ">",
+    amp: "&",
+    quot: "\"",
+    reg: "®",
+    copy: "©",
+    trade: "™",
+    nbsp: " "
+};
+var rentitySymbol = new RegExp("&(" + Object.keys(entitySymbol).join("|") + "|#[0-9]+);", "g");
+
 /**
     updateParent ( childVNode: Object, parent: Object )
 
@@ -2824,8 +2816,27 @@ extend(VNode.prototype, {
 
                 break;
             case 3:
+
+                // 如果nodeValue为string时需将实体符号转换为符号
+                if (type$1(this.nodeValue) === "string") {
+                    this.nodeValue = this.nodeValue.replace(rentitySymbol, function (match, rep) {
+                        var symbol = entitySymbol[rep];
+
+                        // 当实体符号为&#123、&#125之类的unicode编码组成时
+                        if (!symbol) {
+                            if (rep.substr(0, 1) === "#") {
+                                symbol = String.fromCharCode(rep.substr(1)) || match;
+                            } else {
+                                symbol = match;
+                            }
+                        }
+
+                        return symbol;
+                    });
+                }
+
                 if (!this.node) {
-                    this.node = document.createTextNode(this.nodeValue || "");
+                    this.node = document.createTextNode(this.nodeValue);
                 } else {
                     if (this.node.nodeValue !== this.nodeValue) {
                         this.node.nodeValue = this.nodeValue;
@@ -11325,7 +11336,11 @@ cache.pushPlugin("event", {
 		event.remove(undefined, types, listener, false);
 	},
 	emit: function emit(types) {
-		event.emit(undefined, types);
+		for (var _len = arguments.length, params = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+			params[_key - 1] = arguments[_key];
+		}
+
+		event.emit(undefined, types, params);
 	}
 });
 cache.pushPlugin("http", http);
