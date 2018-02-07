@@ -4307,7 +4307,9 @@ function walkVDOM(vdom, callback) {
 	}
 
 	do {
-		callback.apply(null, [vnode].concat(extra));
+
+		// apply不能传递null或undefined，因为在低版本IE下会函数会被普通形式调用
+		callback.apply({}, [vnode].concat(extra));
 
 		if (vnode.children && vnode.children[0]) {
 			walkVDOM(vnode.children[0], callback);
@@ -4316,7 +4318,7 @@ function walkVDOM(vdom, callback) {
 }
 
 /**
-	queryModuleNode ( moduleAttr: String, moduleName: String, context?: DOMObject )
+	queryModuleNode ( moduleName: String, context?: DOMObject )
 
 	Return Type:
 	DOMObject
@@ -4378,6 +4380,20 @@ function getReference(references, refName) {
 	return reference;
 }
 
+/**
+	stringToScopedVNode ( htmlString: String, styles: Object )
+
+	Return Type:
+	Object
+	转换后的VFragment Object
+
+	Description:
+	转换html字符串为vnodes
+	并根据局部css选择器为对应vnode添加局部属性
+
+	URL doc:
+	http://amaple.org/######
+*/
 function stringToScopedVNode(htmlString, styles) {
 	var vstyle = VElement("style");
 
@@ -9572,6 +9588,114 @@ extend(Tmpl, {
     }
 });
 
+/**
+    requestToRouting ( pathResolver: Object, method: String, post: Object )
+
+    Return Type:
+    void
+
+    Description:
+    为最外层模块对象绑定请求动作的事件代理
+    参数post为post请求时的数据
+
+    url doc:
+    http://amaple.org/######
+*/
+function requestToRouting(pathResolver, method, post) {
+    if (method === "GET") {
+        var param = {},
+            nextStructure = Router.matchRoutes(pathResolver.pathname, param),
+            nextStructureBackup = nextStructure.copy();
+
+        if (!nextStructure.isEmpty()) {
+            var location = {
+                path: pathResolver.pathname + pathResolver.search,
+                nextStructure: nextStructure,
+                param: param,
+                get: pathResolver.search,
+                post: post.nodeType ? serialize(post, false) : post,
+                method: method,
+                action: "PUSH"
+            };
+
+            // 根据更新后的页面结构体渲染新视图            
+            Structure.currentPage.update(nextStructure).render(location, nextStructureBackup);
+        } else {
+
+            // 匹配路由后为空时返回false，外层将不阻止此链接
+            return false;
+        }
+    } else if (method === "POST") {
+
+        // post提交数据
+        http.post(pathResolver.pathname + pathResolver.search, post, function (redirectPath) {
+            if (redirectPath) {
+                requestToRouting(amHistory.history.buildURL(redirectPath), "GET", post);
+            }
+        });
+    }
+}
+
+/**
+    routing ( e: Object )
+    
+    Return Type:
+    void
+    
+    Description:
+    路由跳转事件函数
+    
+    URL doc:
+    http://amaple.org/######
+*/
+function routing(e) {
+    var path = attr(this, e.type.toLowerCase() === "submit" ? amAttr.action : amAttr.href);
+    if (path && !/#/.test(path)) {
+
+        var method = e.type.toLowerCase() === "submit" ? attr(this, "method").toUpperCase() : "GET",
+            buildedPath = amHistory.history.buildURL(path),
+            target = attr(this, "target") || "_self";
+
+        if (window.location.host === buildedPath.host && target === "_self") {
+
+            // 如果url相同则不做任何事
+            if (buildedPath.pathname === window.location.pathname && buildedPath.search === window.location.search) {
+                e.preventDefault();
+            } else if (requestToRouting(buildedPath, method, method.toLowerCase() === "post" ? this : {}) !== false) {
+                e.preventDefault();
+            }
+        }
+    }
+}
+
+/**
+    routingHandler ( vnode: Object )
+    
+    Return Type:
+    void
+    
+    Description:
+    为非组件vnode、组件的视图vnodes绑定路由跳转事件(click或submit)
+    
+    URL doc:
+    http://amaple.org/######
+*/
+function routingHandler(vnode) {
+    if (!vnode.isComponent) {
+        if (vnode.nodeType === 1) {
+            if (vnode.attr(amAttr.href)) {
+                vnode.bindEvent("click", routing);
+            } else if (vnode.attr(amAttr.action) && vnode.nodeName === "FORM") {
+                vnode.bindEvent("submit", routing);
+            }
+        }
+    } else {
+        foreach(vnode.templateNodes, function (childVNode) {
+            walkVDOM(childVNode, routingHandler);
+        });
+    }
+}
+
 // 模块标识名
 var identifierName = "moduleIdentifier";
 
@@ -9608,7 +9732,6 @@ function getIdentifier() {
 	http://amaple.org/######
 */
 function findParentVm(elem) {
-
 	var parentVm = null;
 	while (elem.parentNode) {
 		if (elem.__module__) {
@@ -9753,6 +9876,11 @@ function Module(moduleElem) {
 		// 并根据差异更新到实际dom中
 		// 单页模式将会在compileModule编译的函数中对比更新dom
 		moduleElem.diff(moduleElemBackup).patch();
+	} else {
+
+		// 为带有href属性的vnode绑定点击事件
+		// 此函数只有在单页模式下才会被调用
+		walkVDOM(moduleElem, routingHandler);
 	}
 }
 
@@ -10128,7 +10256,16 @@ extend(ModuleLoader, {
 
 		var _abort = arguments.length > 10 && arguments[10] !== undefined ? arguments[10] : noop;
 
-		var path = currentStructure.modulePath;
+		// 给模块元素添加编号属性，此编号是用于模块加载时的模块识别
+		var moduleIdentifier = historyModule && historyModule.moduleIdentifier || moduleNode && moduleNode.nodeType === 1 && moduleNode.attr(identifierName),
+		    path = currentStructure.modulePath;
+
+		if (!moduleIdentifier) {
+			moduleIdentifier = getIdentifier();
+		}
+
+		// 加入等待加载队列
+		this.addWaiting(moduleIdentifier);
 
 		// path为null时表示此模块为空
 		// 此时只需删除模块内元素
@@ -10140,7 +10277,13 @@ extend(ModuleLoader, {
 				moduleNode.diff(diffBackup).patch();
 			};
 
-			return;
+			// 获取模块更新函数完成后在等待队列中移除
+			// 此操作需异步，否则将会实时更新模块
+			setTimeout(function () {
+				_this2.delWaiting(moduleIdentifier);
+			});
+
+			return false;
 		}
 
 		//////////////////////////////////////////////////
@@ -10168,15 +10311,6 @@ extend(ModuleLoader, {
 			};
 		};
 
-		// 给模块元素添加编号属性，此编号是用于模块加载时的模块识别
-		var moduleIdentifier = historyModule && historyModule.moduleIdentifier || moduleNode && moduleNode.nodeType === 1 && moduleNode.attr(identifierName);
-		if (!moduleIdentifier) {
-			moduleIdentifier = getIdentifier();
-		}
-
-		// 加入等待加载队列
-		this.addWaiting(moduleIdentifier);
-
 		// 请求不为post
 		// 并且已有缓存
 		if ((!method || method.toUpperCase() !== "POST") && historyModule) {
@@ -10190,7 +10324,7 @@ extend(ModuleLoader, {
 					moduleNode.render();
 				}
 
-				historyModule.updateFn(core, {
+				historyModule.updateFn(am, {
 					moduleNode: moduleNode,
 					moduleFragment: historyModule.updateFn.moduleFragment.clone(),
 					NodeTransaction: NodeTransaction,
@@ -10247,7 +10381,7 @@ extend(ModuleLoader, {
 						moduleNode[identifierName] = moduleIdentifier;
 					}
 
-					updateFn(core, {
+					updateFn(am, {
 						moduleNode: moduleNode,
 						moduleFragment: updateFn.moduleFragment.clone(),
 						NodeTransaction: NodeTransaction,
@@ -10273,56 +10407,6 @@ extend(ModuleLoader, {
 		}
 	}
 });
-
-/**
-    requestEventHandler ( pathResolver: Object, method: String, post: Object )
-
-    Return Type:
-    void
-
-    Description:
-    为最外层模块对象绑定请求动作的事件代理
-    参数post为post请求时的数据
-
-    url doc:
-    http://amaple.org/######
-*/
-function requestEventHandler(pathResolver, method, post) {
-
-    if (method === "GET") {
-
-        var param = {},
-            nextStructure = Router.matchRoutes(pathResolver.pathname, param),
-            nextStructureBackup = nextStructure.copy();
-
-        if (!nextStructure.isEmpty()) {
-            var location = {
-                path: pathResolver.pathname + pathResolver.search,
-                nextStructure: nextStructure,
-                param: param,
-                get: pathResolver.search,
-                post: post.nodeType ? serialize(post, false) : post,
-                method: method,
-                action: "PUSH"
-            };
-
-            // 根据更新后的页面结构体渲染新视图            
-            Structure.currentPage.update(nextStructure).render(location, nextStructureBackup);
-        } else {
-
-            // 匹配路由后为空时返回false，外层将不阻止此链接
-            return false;
-        }
-    } else if (method === "POST") {
-
-        // post提交数据
-        http.post(pathResolver.pathname + pathResolver.search, post, function (redirectPath) {
-            if (redirectPath) {
-                requestEventHandler(amHistory.history.buildURL(redirectPath), "GET", post);
-            }
-        });
-    }
-}
 
 /**
     unmountStructure ( structure: Object )
@@ -11000,7 +11084,7 @@ function install(pluginDef) {
 	foreach(pluginBuilder.buildings, function (building) {
 		if (building.url === path) {
 			building.install = function () {
-				buildPlugin(pluginDef, core);
+				buildPlugin(pluginDef, am);
 			};
 			find = true;
 		}
@@ -11009,7 +11093,7 @@ function install(pluginDef) {
 	// 没有找到需安装插件时直接安装此插件
 	// 用于普通模式下安装插件
 	if (!find) {
-		buildPlugin(pluginDef, core);
+		buildPlugin(pluginDef, am);
 	}
 }
 
@@ -11164,28 +11248,6 @@ function startRouter(routerConfig) {
 	}
 	delete routerConfig.history;
 
-	// 绑定元素请求或提交表单的事件到body元素上
-	event.on(document.body, "click submit", function (e) {
-
-		var target = e.target,
-		    path = attr(target, e.type.toLowerCase() === "submit" ? amAttr.action : amAttr.href);
-
-		if (path && !/#/.test(path)) {
-
-			var method = e.type.toLowerCase() === "submit" ? attr(target, "method").toUpperCase() : "GET",
-			    buildedPath = amHistory.history.buildURL(path);
-
-			if (window.location.host === buildedPath.host) {
-				if (buildedPath.pathname === window.location.pathname && buildedPath.search === window.location.search) {
-
-					e.preventDefault();
-				} else if (requestEventHandler(buildedPath, method, method.toLowerCase() === "post" ? target : {}) !== false) {
-					e.preventDefault();
-				}
-			}
-		}
-	});
-
 	var plugin = routerConfig.plugin,
 	    loadPlugins = [];
 
@@ -11270,7 +11332,7 @@ cache.pushPlugin("http", http);
 cache.pushPlugin("Promise", Promise);
 
 // 导出amaple主对象
-var core = {
+var am = {
 
 	// 路由模式，启动路由时可进行模式配置
 	// 默认为自动选择路由模式，即在支持html5 history API时使用新特性，不支持的情况下自动回退到hash模式
@@ -11300,6 +11362,6 @@ var core = {
 	install: install
 };
 
-return core;
+return am;
 
 })));
