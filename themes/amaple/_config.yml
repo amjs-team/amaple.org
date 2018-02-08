@@ -5,7 +5,7 @@ language: zh-cn
 # main menu navigation
 menu:
   # Follow: /follow
-  Join: /join
+  Join: /doc/start-router
   Document: /doc
   home: /
   API: /api

@@ -4058,7 +4058,7 @@ var general = {
 	tag: function tag(next, data) {
 		var name = data.name;
 		return function (elem) {
-			return elem.nodeName.toLowerCase() === name && next(elem);
+			return elem.nodeType === 1 && elem.nodeName.toLowerCase() === name && next(elem);
 		};
 	},
 
@@ -4183,17 +4183,24 @@ function compileToken(token, context) {
 	}).reduce(reduceRules, falseFunc);
 }
 
-function findNode(test, targetChildren) {
+function findNode(test, targetChildren, isWatchCond) {
 	var result = [];
 	foreach(targetChildren, function (child) {
-		if (child.nodeType !== 1) {
-			return true;
-		}
-		if (test(child)) {
+		if (child.nodeType === 1 && test(child)) {
 			result.push(child);
 		}
 
-		if (child.children.length > 0) {
+		if (child.conditionElems && child.conditionElems.length > 0 && isWatchCond !== false) {
+
+			// 复制一份数组并移除当前vnode
+			var walkElems = child.conditionElems.concat(),
+			    index = walkElems.indexOf(child);
+			if (index > -1) {
+				walkElems.splice(index, 1);
+			}
+			result = result.concat(findNode(test, walkElems, false));
+		}
+		if (child.nodeType === 1 && child.children.length > 0) {
 			result = result.concat(findNode(test, child.children));
 		}
 	});
@@ -4392,7 +4399,7 @@ function getReference(references, refName) {
 }
 
 /**
-	stringToScopedVNode ( htmlString: String, styles: Object )
+	stringToVNode ( htmlString: String, styles: Object, scopedCssObject: Object )
 
 	Return Type:
 	Object
@@ -4401,31 +4408,35 @@ function getReference(references, refName) {
 	Description:
 	转换html字符串为vnodes
 	并根据局部css选择器为对应vnode添加局部属性
+	对应的模块标识会保存到scopedCssObject.identifier中
 
 	URL doc:
 	http://amaple.org/######
 */
-function stringToScopedVNode(htmlString, styles) {
+function stringToVNode(htmlString, styles, scopedCssObject) {
+	scopedCssObject = scopedCssObject || {};
 	var vstyle = VElement("style");
 
 	var vf = parseHTML(htmlString),
 	    styleString = styles;
+
+	// 将解析的vnode转换为VFragment
 	vf = vf.nodeType === 11 ? vf : VFragment([vf]);
 	if (type$1(styles) === "array") {
 		styleString = "";
 
-		var scopedCssIdentifier = identifierPrefix + guid();
+		var scopedCssIdentifier = scopedCssObject.identifier = identifierPrefix + guid();
+		scopedCssObject.selectors = [];
 		foreach(styles, function (styleItem) {
+
+			// 为css选择器添加范围属性限制
+			// 但需排除如@keyframes的项
 			if (styleItem.selector.substr(0, 1) !== "@") {
-
-				// 为范围样式添加范围属性限制
-				foreach(query$1(styleItem.selector, vf), function (velem) {
-					velem.attr(scopedCssIdentifier, "");
-				});
-
-				// 为css选择器添加范围属性限制
 				var selectorArray = [];
-				foreach(styleItem.selector.split(","), function (selector) {
+				foreach(styleItem.selector.split(",").map(function (item) {
+					return item.trim();
+				}), function (selector) {
+					scopedCssObject.selectors.push(selector);
 					var pseudoMatch = selector.match(/:[\w-()\s]+|::selection/i);
 					if (pseudoMatch) {
 						selectorArray.push(selector.replace(pseudoMatch[0], "[" + scopedCssIdentifier + "]" + pseudoMatch[0]));
@@ -4442,10 +4453,20 @@ function stringToScopedVNode(htmlString, styles) {
 		vstyle.attr("scoped", "");
 	}
 
-	vstyle.appendChild(VTextNode(styleString));
-	vf.appendChild(vstyle);
+	if (styleString.trim()) {
+		vstyle.appendChild(VTextNode(styleString));
+		vf.appendChild(vstyle);
+	}
 
 	return vf;
+}
+
+function appendScopedAttr(vnode, selectors, identifier) {
+	foreach(selectors, function (selector) {
+		foreach(query$1(selector, vnode), function (velem) {
+			velem.attr(identifier, "");
+		});
+	});
 }
 
 /**
@@ -5875,7 +5896,9 @@ function parseScript(moduleString, scriptPaths, scriptNames, parses) {
 function compileModule(moduleString) {
 
 	// 模块编译正则表达式
-	var rmodule = /^<module[\s\S]+<\/module>/i;
+	var rmodule = /^<module[\s\S]+<\/module>/i,
+	    scopedCssObject = {};
+
 	var title = "",
 	    moduleFragment = void 0;
 	if (rmodule.test(moduleString)) {
@@ -5907,7 +5930,7 @@ function compileModule(moduleString) {
 		////////////////////////////////////////////////////////
 		////////////////////////////////////////////////////////
 		/// 编译局部样式
-		moduleFragment = stringToScopedVNode(parses.view, parses.style);
+		moduleFragment = stringToVNode(parses.view, parses.style, scopedCssObject);
 
 		////////////////////////////////////////////////////////
 		////////////////////////////////////////////////////////
@@ -5937,7 +5960,7 @@ function compileModule(moduleString) {
 
 	var updateFn = new Function("am", "args", moduleString);
 	updateFn.moduleFragment = moduleFragment;
-	return { updateFn: updateFn, title: title };
+	return { updateFn: updateFn, title: title, scopedCssObject: scopedCssObject };
 }
 
 // Promise的三种状态定义
@@ -8055,7 +8078,7 @@ var componentConstructor = {
         URL doc:
         http://amaple.org/######
     */
-    initTemplate: function initTemplate(template, scopedStyle) {
+    initTemplate: function initTemplate(template, scopedStyle, scopedCssObject) {
 
         // 去除所有标签间的空格
         template = trimHTML(template.trim());
@@ -8074,7 +8097,7 @@ var componentConstructor = {
             styleObject.push({ selector: selector, content: styleString });
         });
 
-        return stringToScopedVNode(template, styleObject);
+        return stringToVNode(template, styleObject, scopedCssObject);
     },
 
 
@@ -8275,7 +8298,8 @@ extend(Component.prototype, {
         });
 
         // 处理模块并挂载数据
-        var vfragment = componentConstructor.initTemplate(componentString, scopedStyle),
+        var scopedCssObject = {},
+            vfragment = componentConstructor.initTemplate(componentString, scopedStyle, scopedCssObject),
             subElements = componentConstructor.initSubElements(componentVNode, subElementNames),
             tmpl = new Tmpl(componentVm, this.depComponents, this);
 
@@ -8287,6 +8311,9 @@ extend(Component.prototype, {
         // 解析组件并挂载数据
         this.references = {};
         tmpl.mount(vfragment, false, Tmpl.defineScoped(subElements, componentVNode, false));
+
+        // 追加局部属性
+        appendScopedAttr(vfragment, scopedCssObject.selectors, scopedCssObject.identifier);
 
         // 保存组件对象和结构
         componentVNode.component = this;
@@ -8427,7 +8454,7 @@ var attrExpr = {
         // 当表达式为混合表达式时，将表达式转换为字符串拼接代码
         else {
                 this.expr = this.expr.replace(/{{\s*(.*?)\s*}}/g, function (match, rep) {
-                    return "\" + " + rep + " + \"";
+                    return "\" + (" + rep + ") + \"";
                 });
                 this.expr = "\"" + this.expr + "\"";
             }
@@ -9888,6 +9915,8 @@ function Module(moduleElem) {
 		// 单页模式将会在compileModule编译的函数中对比更新dom
 		moduleElem.diff(moduleElemBackup).patch();
 	} else {
+		var scopedCssObject = Structure.getCurrentRender().scopedCssObject;
+		appendScopedAttr(moduleElem, scopedCssObject.selectors, scopedCssObject.identifier);
 
 		// 为带有href属性的vnode绑定点击事件
 		// 此函数只有在单页模式下才会被调用
@@ -10306,8 +10335,10 @@ extend(ModuleLoader, {
 		path += suffix + args;
 
 		var historyModule = cache.getModule(path),
-		    signCurrentRender = function signCurrentRender() {
-			Structure.signCurrentRender(currentStructure, param, args, data);
+		    signCurrentRender = function signCurrentRender(scopedCssObject) {
+			return function () {
+				Structure.signCurrentRender(currentStructure, param, args, data, scopedCssObject);
+			};
 		},
 		    flushChildren = function flushChildren(route) {
 			return function () {
@@ -10340,7 +10371,7 @@ extend(ModuleLoader, {
 					moduleFragment: historyModule.updateFn.moduleFragment.clone(),
 					NodeTransaction: NodeTransaction,
 					require: require,
-					signCurrentRender: signCurrentRender,
+					signCurrentRender: signCurrentRender(historyModule.scopedCssObject),
 					flushChildren: flushChildren(this),
 					extend: extend
 				});
@@ -10372,9 +10403,11 @@ extend(ModuleLoader, {
 				/////////////////////////////////////////////////////////
 				// 编译module为可执行函数
 				// 将请求的html替换到module模块中
+				// scopedCssObject函数中包含需设置范围属性的选择器和范围属性名，它将在Module中被设置
 				var _compileModule = compileModule(moduleString),
 				    updateFn = _compileModule.updateFn,
-				    title = _compileModule.title;
+				    title = _compileModule.title,
+				    scopedCssObject = _compileModule.scopedCssObject;
 
 				_this2.updateTitle(title);
 
@@ -10385,7 +10418,8 @@ extend(ModuleLoader, {
 					cache.pushModule(path, {
 						title: title,
 						updateFn: updateFn,
-						moduleIdentifier: moduleIdentifier
+						moduleIdentifier: moduleIdentifier,
+						scopedCssObject: scopedCssObject
 					});
 
 					if (!moduleNode[identifierName]) {
@@ -10397,7 +10431,7 @@ extend(ModuleLoader, {
 						moduleFragment: updateFn.moduleFragment.clone(),
 						NodeTransaction: NodeTransaction,
 						require: require,
-						signCurrentRender: signCurrentRender,
+						signCurrentRender: signCurrentRender(scopedCssObject),
 						flushChildren: flushChildren(this),
 						extend: extend
 					});
@@ -10625,7 +10659,7 @@ extend(Structure.prototype, {
 extend(Structure, {
 
     /**
-        signCurrentRender ( structureItem: Object, param: Object, args: String, data: Object )
+        signCurrentRender ( structureItem: Object, param: Object, args: String, data: Object, scopedCssObject: Object )
         
         Return Type:
         void
@@ -10637,10 +10671,11 @@ extend(Structure, {
         URL doc:
         http://amaple.org/######
     */
-    signCurrentRender: function signCurrentRender(structureItem, param, args, data) {
+    signCurrentRender: function signCurrentRender(structureItem, param, args, data, scopedCssObject) {
         structureItem.param = param;
         structureItem.get = args;
         structureItem.post = data;
+        structureItem.scopedCssObject = scopedCssObject;
         Structure.currentRender = structureItem;
     },
 
@@ -11022,7 +11057,7 @@ extend(Router, {
 
                     param[route.name] = { data: {} };
                     foreach(pathReg.path.param, function (i, paramName) {
-                        param[route.name].data[paramName] = matchPath[i];
+                        param[route.name].data[paramName] = matchPath[i] || "";
                     });
 
                     routes.push(entityItem);

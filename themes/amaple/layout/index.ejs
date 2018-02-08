@@ -46,7 +46,7 @@ pageTitle += ' [ ' + config.title + ' ]';
       router.module ()
       .route ( ["/", "/index"], "index" )
       .route ( "/doc", "doc", function ( childRouter ) {
-        childRouter.module ().defaultRoute ( "hello-world/index" );
+        childRouter.module ().defaultRoute ( "hello-world/index" ).route ( "start-router", "start-router/index" );
         childRouter.module ( "menu" ).route ( ["", ":menu"], "common/menu" );
       } );
 
