@@ -1,13 +1,13 @@
-<module :title="<%=page.title%>">
+<module :title="<%=page.title%> · Amaple">
 	<template>
 		<%-page.content %>
 		<div id="page-nav">
-			<a class="nav prev" href="#">
+			<a class="nav prev" href="{{ prev.path }}" :if="prev.title">
 				<img src="/images/arrow.png">
-				<span class="title-color">prev</span>
+				<span class="title-color">{{ prev.title }}</span>
 			</a>
-			<a class="title-color nav next" href="#">
-				<span class="title-color">next</span>
+			<a class="title-color nav next" href="{{ next.path }}" :if="next.title">
+				<span class="title-color">{{ next.title }}</span>
 				<img src="/images/arrow.png">
 			</a>
 		</div>
@@ -15,9 +15,21 @@
 	<script>
 		new am.Module ( {
 			init: function ( event ) {
+				console.log ( 111 );
 				event.on ( "deliverToc", function ( obj ) {
 					obj.list = <%-tocToArray ( toc ( page.content, { class: "am", list_number: false } ) ) %>;
 				} );
+
+				return {
+					prev: {
+						title: "<%-(page.prev || {}).title %>",
+						path: "<%-tranformLink ( (page.prev || {}).path || '', config.permalink ) %>"
+					},
+					next: {
+						title: "<%-(page.next || {}).title %>",
+						path: "<%-tranformLink ( (page.next || {}).path || '', config.permalink ) %>"
+					}
+				};
 			}
 		} );
 	</script>

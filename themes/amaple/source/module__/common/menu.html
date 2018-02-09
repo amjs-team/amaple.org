@@ -33,6 +33,7 @@
 			init: function ( event ) {
 				var obj = {};
 				event.emit ( "deliverToc", obj );
+				console.log ( obj );
 				return {
 					list: obj.list || []
 				};

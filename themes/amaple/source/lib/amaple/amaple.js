@@ -5126,12 +5126,12 @@ var hashHistory = {
 			var locationGuide = _this.getState();
 			if (!locationGuide) {
 				var path = _this.getPathname(),
-				    param = {},
-				    structure = Router.matchRoutes(path, param);
+				    extra = {},
+				    structure = Router.matchRoutes(path, extra);
 
 				locationGuide = {
 					structure: structure,
-					param: param,
+					param: extra.param,
 					get: _this.getQuery(),
 					post: {}
 				};
@@ -5340,12 +5340,12 @@ var browserHistory = {
 
 			if (!locationGuide) {
 				var path = window.location.pathname,
-				    param = {},
-				    structure = Router.matchRoutes(path, param);
+				    extra = {},
+				    structure = Router.matchRoutes(path, extra);
 
 				locationGuide = {
 					structure: structure,
-					param: param,
+					param: extra.param,
 					get: window.location.search,
 					post: {}
 				};
@@ -9641,15 +9641,16 @@ extend(Tmpl, {
 */
 function requestToRouting(pathResolver, method, post) {
     if (method === "GET") {
-        var param = {},
-            nextStructure = Router.matchRoutes(pathResolver.pathname, param),
+        var extra = {},
+            nextStructure = Router.matchRoutes(pathResolver.pathname, extra),
             nextStructureBackup = nextStructure.copy();
 
+        pathResolver.pathname = extra.path;
         if (!nextStructure.isEmpty()) {
             var location = {
                 path: pathResolver.pathname + pathResolver.search,
                 nextStructure: nextStructure,
-                param: param,
+                param: extra.param,
                 get: pathResolver.search,
                 post: post.nodeType ? serialize(post, false) : post,
                 method: method,
@@ -10246,13 +10247,13 @@ extend(ModuleLoader.prototype, {
 
 			// 加载模块遇到错误，直接处理错误信息
 			var pathResolver = amHistory.history.buildURL(this.moduleError),
-			    param = {},
-			    nextStructure = Router.matchRoutes(pathResolver.pathname, param),
+			    extra = {},
+			    nextStructure = Router.matchRoutes(pathResolver.pathname, extra),
 			    nextStructureBackup = nextStructure.copy(),
 			    location = {
 				path: this.moduleError,
 				nextStructure: nextStructure,
-				param: param,
+				param: extra.param,
 				get: pathResolver.search,
 				post: {},
 				action: "REPLACE" // 暂不确定是不是为"PUSH"???
@@ -10992,7 +10993,7 @@ extend(Router, {
         URL doc:
         http://amaple.org/######
     */
-    matchRoutes: function matchRoutes(path, param) {
+    matchRoutes: function matchRoutes(path, extra) {
         var routeTree = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : this.routeTree;
 
         var _this = this;
@@ -11000,11 +11001,18 @@ extend(Router, {
         var parent = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
         var matchError404 = arguments[4];
 
-        var routes = [];
+        if (parent === null) {
 
+            // 初始化
+            extra.param = {};
+            extra.path = path;
+        }
+
+        var routes = [];
         foreach(routeTree, function (route) {
             if (route.hasOwnProperty("redirect")) {
-                var isContinue = true;
+                var isContinue = true,
+                    pathBackup = path;
 
                 foreach(route.redirect, function (redirect) {
 
@@ -11018,6 +11026,13 @@ extend(Router, {
 
                         return to;
                     });
+
+                    // 更新extra.path
+                    if (pathBackup) {
+                        extra.path = extra.path.replace(pathBackup, path);
+                    } else {
+                        extra.path += (extra.path.substr(-1) === "/" ? "" : "/") + path;
+                    }
 
                     return isContinue;
                 });
@@ -11055,17 +11070,18 @@ extend(Router, {
                     isMatch = true;
                     entityItem.modulePath = pathReg.modulePath;
 
-                    param[route.name] = { data: {} };
+                    extra.param[route.name] = { data: {} };
                     foreach(pathReg.path.param, function (i, paramName) {
-                        param[route.name].data[paramName] = matchPath[i] || "";
+                        extra.param[route.name].data[paramName] = matchPath[i] || "";
                     });
 
                     routes.push(entityItem);
                 }
 
                 if (type$1(pathReg.children) === "array") {
-                    var _param = {},
-                        children = _this.matchRoutes(matchPath ? path.replace(matchPath[0], "") : path, _param, pathReg.children, entityItem);
+                    var _extra = { param: {}, path: extra.path },
+                        children = _this.matchRoutes(matchPath ? path.replace(matchPath[0], "") : path, _extra, pathReg.children, entityItem);
+                    extra.path = _extra.path;
 
                     // 如果父路由没有匹配到，但子路由有匹配到也需将父路由添加到匹配项中
                     if (!isEmpty(children)) {
@@ -11074,11 +11090,11 @@ extend(Router, {
 
                             entityItem.modulePath = pathReg.modulePath;
                             routes.push(entityItem);
-                            param[route.name] = { data: {} };
+                            extra.param[route.name] = { data: {} };
                         }
 
                         entityItem.children = children;
-                        param[route.name].children = _param;
+                        extra.param[route.name].children = _extra.param;
                     }
                 }
 
@@ -11340,17 +11356,22 @@ function startRouter(routerConfig) {
 		// 插件加载完成后构建插件
 		pluginBuilder.build();
 
-		var param = {},
+		var extra = {},
 		    path = amHistory.history.getPathname(),
 		    location = {
-			path: path,
-			nextStructure: Router.matchRoutes(path, param),
-			param: param,
+			nextStructure: Router.matchRoutes(path, extra),
+			path: extra.path,
+			param: extra.param,
 			get: amHistory.history.getQuery(),
 			post: {},
 			method: "GET",
 			action: "NONE"
 		};
+
+		// 当路由被重定向后需使用replace的方式修改当前的url
+		if (path !== location.path) {
+			location.action = "REPLACE";
+		}
 
 		// Router.matchRoutes()匹配当前路径需要更新的模块
 		// 因路由刚启动，故将nextStructure直接赋值给currentPage

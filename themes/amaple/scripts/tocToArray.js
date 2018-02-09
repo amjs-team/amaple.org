@@ -26,4 +26,4 @@ hexo.extend.helper.register( "tocToArray", function ( tocString ) {
 	} );
 
 	return JSON.stringify ( list );
-});
+} );

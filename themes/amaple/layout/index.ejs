@@ -1,18 +1,8 @@
-<%
-var pageTitle = page.title || config.subtitle || '';
-if (is_archive()) pageTitle = 'Archives';
-if (is_tag()) pageTitle = 'Tag: ' + page.tag;
-if (is_category()) pageTitle = 'Category: ' + page.category;
-if (is_month()) pageTitle += ': ' + page.month + '/' + page.year;
-if (is_year()) pageTitle += ': ' + page.year;
-pageTitle += ' [ ' + config.title + ' ]';
-%>
-
 <!DOCTYPE html>
 <html lang="<%=config.language%>">
 <head>
   <meta charset="UTF-8">
-  <title><%=page.title || config.subtitle || ''%></title>
+  <title>Loading...</title>
   <% if (theme.stylesheets !== undefined && theme.stylesheets.length > 0) { %>
   <!-- stylesheets list from config.yml -->
   <% theme.stylesheets.forEach(function(url) { %>
@@ -46,8 +36,13 @@ pageTitle += ' [ ' + config.title + ' ]';
       router.module ()
       .route ( ["/", "/index"], "index" )
       .route ( "/doc", "doc", function ( childRouter ) {
-        childRouter.module ().defaultRoute ( "hello-world/index" ).route ( "start-router", "start-router/index" );
+        childRouter.redirect ("", "first-step");
+        
         childRouter.module ( "menu" ).route ( ["", ":menu"], "common/menu" );
+
+        childRouter.module ().route ( "first-step", "first-step/index" )
+        .route ( "start-router", "start-router/index" )
+        .route ( "module", "module/index" );
       } );
 
       router.module ( "footer" )
