@@ -30,13 +30,17 @@
 
 	<script>
 		new am.Module ( {
-			init: function ( event ) {
-				var obj = {};
-				event.emit ( "deliverToc", obj );
-				console.log ( obj );
+			init: function () {
 				return {
-					list: obj.list || []
+					list: []
 				};
+			},
+			mounted: function ( event ) {
+				console.log ( 222 );
+				var self = this;
+				event.on ( "deliverToc", function ( list ) {
+					self.state.list = list;
+				} );
 			}
 		} );
 	</script>

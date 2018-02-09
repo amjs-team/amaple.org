@@ -16,9 +16,7 @@
 		new am.Module ( {
 			init: function ( event ) {
 				console.log ( 111 );
-				event.on ( "deliverToc", function ( obj ) {
-					obj.list = <%-tocToArray ( toc ( page.content, { class: "am", list_number: false } ) ) %>;
-				} );
+				event.emit ( "deliverToc", <%-tocToArray ( toc ( page.content, { class: "am", list_number: false } ) ) %> );
 
 				return {
 					prev: {
