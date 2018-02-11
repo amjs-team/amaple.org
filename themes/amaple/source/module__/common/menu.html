@@ -3,7 +3,7 @@
 		<div class="nav">
 			<h2 class="title-color title-size">当前目录</h2>
 			<ol class="current-nav">
-				<li :for="item in list">
+				<li :for="item in list [ 0 ].children">
 					<span>{{ item.tag }}</span>
 					<ol :if="item.children.length > 0" class="child-nav">
 						<li :for="childItem in item.children">
@@ -15,11 +15,11 @@
 		</div>
 		<div class="nav">
 			<h2 class="title-color title-size">{{ categoryName }}</h2>
-			<ul class="current-nav">
+			<ol class="current-nav">
 				<li :for="post in posts">
 					<a href="{{ post.path }}">{{ post.title }}</a>
 				</li>
-			</ul>
+			</ol>
 		</div>
 	</template>
 
@@ -27,18 +27,15 @@
 		new am.Module ( {
 			init: function () {
 				return {
-					list: [],
+					list: [
+						{ children: [] }
+					],
 					categoryName: "",
 					posts: []
 				};
 			},
-			mounted: function ( event ) {
-				var self = this;
-				event.on ( "deliverToc", function ( list, posts, categoryName ) {
-					self.state.list = list;
-					self.state.categoryName = categoryName;
-					self.state.posts = posts;
-				} );
+			mounted: function ( menu ) {
+				menu.state = this.state;
 			}
 		} );
 	</script>
@@ -55,7 +52,7 @@
 			margin: 6px 0;
 		}
 		.child-nav {
-			margin-left: 4px;
+			margin-left: 10px;
 		}
 		.child-nav li {
 			margin: 0;

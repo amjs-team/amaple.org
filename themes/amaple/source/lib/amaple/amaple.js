@@ -923,7 +923,7 @@ extend(check, {
 });
 
 function NodeTransaction() {
-	this.transactions = null;
+	this.transactions = [];
 }
 
 extend(NodeTransaction.prototype, {
@@ -960,8 +960,16 @@ extend(NodeTransaction.prototype, {
  	http://amaple.org/######
  */
 	collect: function collect(moduleNode) {
-		if (!this.transactions) {
-			this.transactions = [moduleNode, moduleNode.clone()];
+		var find = false;
+		foreach(this.transactions, function (transaction) {
+			if (transaction[0] === moduleNode) {
+				find = true;
+				return false;
+			}
+		});
+
+		if (!find) {
+			this.transactions.push([moduleNode, moduleNode.clone()]);
 		}
 	},
 
@@ -979,9 +987,9 @@ extend(NodeTransaction.prototype, {
  	http://amaple.org/######
  */
 	commit: function commit() {
-		if (this.transactions) {
-			this.transactions[0].diff(this.transactions[1]).patch();
-		}
+		foreach(this.transactions, function (transaction) {
+			transaction[0].diff(transaction[1]).patch();
+		});
 		NodeTransaction.acting = undefined;
 	}
 });
@@ -7628,6 +7636,34 @@ function convertSubState(value, subs, context) {
 	return value;
 }
 
+function cloneNodeMaps(originVal, newVal, newValBackup) {
+	if (!originVal) {
+		return;
+	}
+	if (originVal.nodeMaps) {
+		Object.defineProperty(newVal, "nodeMaps", {
+			value: [],
+			writable: true,
+			configurable: true,
+			enumeratable: false
+		});
+		newVal.nodeMaps.index = 0;
+
+		foreach(originVal.nodeMaps, function () {
+
+			// 需复制不同的多份相同数组
+			// 以便对它们的操作都是独立的
+			newVal.nodeMaps.push(newValBackup.concat());
+		});
+	}
+
+	foreach(newValBackup, function (item, i) {
+		if (/object|array/.test(type$1(item))) {
+			cloneNodeMaps(originVal[i], newVal[i], item);
+		}
+	});
+}
+
 /**
 	initMethod ( methods: Array, context: Object )
 
@@ -7698,17 +7734,7 @@ function initState(states, context) {
 				} else if (type$1(newVal) === "array") {
 					var newValBackup = newVal;
 					newVal = initArray(newVal, subs, context);
-					if (state.nodeMaps) {
-						Object.defineProperty(newVal, "nodeMaps", { value: [], writable: true, configurable: true, enumeratable: false });
-						newVal.nodeMaps.index = 0;
-
-						foreach(state.nodeMaps, function () {
-
-							// 需复制不同的多份相同数组
-							// 以便对它们的操作都是独立的
-							newVal.nodeMaps.push(newValBackup.concat ());
-						});
-					}
+					cloneNodeMaps(state, newVal, newValBackup);
 				}
 
 				oldVal = state;
@@ -8655,7 +8681,7 @@ var _for = {
         http://amaple.org/######
     */
     before: function before() {
-        var forExpr = /^\s*([$\w(),\s]+)\s+in\s+([$\w.]+)\s*$/,
+        var forExpr = /^\s*([$\w(),\s]+)\s+in\s+([$\w.\[\]\s]+)\s*$/,
             keyExpr = /^\(\s*([$\w]+)\s*,\s*([$\w]+)\s*\)$/;
 
         if (!forExpr.test(this.expr)) {
@@ -8696,19 +8722,22 @@ var _for = {
     update: function update(iterator) {
         var _this = this;
 
-        var elem = this.node,
+        var titerator = type$1(iterator),
+            elem = this.node,
             fragment = VFragment();
-
         var itemNode = void 0;
 
+        if (!/^array|object|number|string$/.test(titerator)) {
+            throw directiveErr("for", "for指令只允许绑定Array、Object、Number和String四种类型的值");
+        }
         // 如果迭代变量为number或string时需将它转换为array
-        if (type$1(iterator) === "number") {
+        if (titerator === "number") {
             var num = iterator;
             iterator = [];
             for (var i = 0; i < num; i++) {
                 iterator.push(i);
             }
-        } else if (type$1(iterator) === "string") {
+        } else if (titerator === "string") {
             iterator = iterator.split("");
         }
 
@@ -9697,6 +9726,19 @@ function requestToRouting(pathResolver, method, post) {
     }
 }
 
+function getRoutingElem(elem, rootElem, eventType) {
+    var path = null;
+    var pathAttr = eventType === "submit" ? amAttr.action : amAttr.href;
+    do {
+        path = attr(elem, pathAttr);
+        if (path) {
+            break;
+        }
+    } while ((elem = elem.parentNode) !== rootElem);
+
+    return { elem: elem, path: path };
+}
+
 /**
     routing ( e: Object )
     
@@ -9710,50 +9752,26 @@ function requestToRouting(pathResolver, method, post) {
     http://amaple.org/######
 */
 function routing(e) {
-    var path = attr(this, e.type.toLowerCase() === "submit" ? amAttr.action : amAttr.href);
+    var eventType = e.type.toLowerCase(),
+        _getRoutingElem = getRoutingElem(e.target, this, eventType),
+        elem = _getRoutingElem.elem,
+        path = _getRoutingElem.path;
+
     if (path && !/#/.test(path)) {
 
-        var method = e.type.toLowerCase() === "submit" ? attr(this, "method").toUpperCase() : "GET",
+        var method = eventType === "submit" ? (attr(elem, "method") || "POST").toUpperCase() : "GET",
             buildedPath = amHistory.history.buildURL(path),
-            target = attr(this, "target") || "_self";
+            target = attr(elem, "target") || "_self";
 
         if (window.location.host === buildedPath.host && target === "_self") {
 
             // 如果url相同则不做任何事
-            if (buildedPath.pathname === window.location.pathname && buildedPath.search === window.location.search) {
+            if (buildedPath.pathname === amHistory.history.getPathname && buildedPath.search === amHistory.history.getQuery) {
                 e.preventDefault();
-            } else if (requestToRouting(buildedPath, method, method.toLowerCase() === "post" ? this : {}) !== false) {
+            } else if (requestToRouting(buildedPath, method, method === "POST" ? elem : {}) !== false) {
                 e.preventDefault();
             }
         }
-    }
-}
-
-/**
-    routingHandler ( vnode: Object )
-    
-    Return Type:
-    void
-    
-    Description:
-    为非组件vnode、组件的视图vnodes绑定路由跳转事件(click或submit)
-    
-    URL doc:
-    http://amaple.org/######
-*/
-function routingHandler(vnode) {
-    if (!vnode.isComponent) {
-        if (vnode.nodeType === 1) {
-            if (vnode.attr(amAttr.href)) {
-                vnode.bindEvent("click", routing);
-            } else if (vnode.attr(amAttr.action) && vnode.nodeName === "FORM") {
-                vnode.bindEvent("submit", routing);
-            }
-        }
-    } else {
-        foreach(vnode.templateNodes, function (childVNode) {
-            walkVDOM(childVNode, routingHandler);
-        });
     }
 }
 
@@ -9943,7 +9961,7 @@ function Module(moduleElem) {
 
 		// 为带有href属性的vnode绑定点击事件
 		// 此函数只有在单页模式下才会被调用
-		walkVDOM(moduleElem, routingHandler);
+		// walkVDOM ( moduleElem, routingHandler );
 	}
 }
 
@@ -10284,13 +10302,7 @@ extend(ModuleLoader.prototype, {
 			// 根据更新后的页面结构体渲染新视图
 			Structure.currentPage.update(location.nextStructure).render(location, nextStructureBackup);
 		} else {
-
-			foreach(this.nextStructure.entity, function (structure) {
-				if (structure.updateFn) {
-					structure.updateFn();
-					delete structure.updateFn;
-				}
-			});
+			this.nextStructure.flush();
 		}
 	}
 });
@@ -10676,6 +10688,32 @@ extend(Structure.prototype, {
             case "POP":
             // do nothing
         }
+    },
+
+
+    /**
+        flush ( structures: Array )
+    
+        Return Type:
+        void
+    
+        Description:
+        刷新更新后的结构到视图层
+    
+        URL doc:
+        http://amaple.org/######
+    */
+    flush: function flush(structures) {
+        var self = this;
+        foreach(structures || this.entity, function (structure) {
+            if (structure.updateFn) {
+                structure.updateFn();
+                delete structure.updateFn;
+            }
+            else if (structure.children && structure.children.length > 0) {
+                self.flush(structure.children);
+            }
+        });
     }
 });
 
@@ -11331,6 +11369,7 @@ function startRouter(routerConfig) {
 		return;
 	}
 	delete routerConfig.history;
+	event.on(document.body, "click submit", routing);
 
 	var plugin = routerConfig.plugin,
 	    loadPlugins = [];

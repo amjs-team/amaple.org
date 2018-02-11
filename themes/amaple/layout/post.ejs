@@ -14,12 +14,10 @@
 	</template>
 	<script>
 		new am.Module ( {
-			init: function ( event ) {
-				event.emit ( "deliverToc", 
-					<%-tocToArray ( toc ( page.content, { class: "am", list_number: false } ) ) %>,
-					<%-getPostsByCategory ( site.posts, page.categories.data [ 0 ].name, transformLink, config.permalink ) %>,
-					"<%-page.categories.data [ 0 ].name %>"
-				);
+			init: function ( menu ) {
+				menu.state.list = <%-tocToArray ( toc ( page.content, { class: "am", list_number: false } ) ) %>;
+				menu.state.posts = <%-getPostsByCategory ( site.posts, page.categories.data [ 0 ].name, transformLink, config.permalink ) %>;
+				menu.state.categoryName = "<%-page.categories.data [ 0 ].name %>";
 
 				return {
 					prev: {
