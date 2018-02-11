@@ -14,17 +14,12 @@
 			</ol>
 		</div>
 		<div class="nav">
-			<h2 class="title-color title-size">基础</h2>
-			<ol class="current-nav">
-				<li :for="item in list">
-					<span>{{ item.tag }}</span>
-					<ol :if="item.children.length > 0" class="child-nav">
-						<li :for="childItem in item.children">
-							<span>{{ childItem.tag }}</span>
-						</li>
-					</ol>
+			<h2 class="title-color title-size">{{ categoryName }}</h2>
+			<ul class="current-nav">
+				<li :for="post in posts">
+					<a href="{{ post.path }}">{{ post.title }}</a>
 				</li>
-			</ol>
+			</ul>
 		</div>
 	</template>
 
@@ -32,14 +27,17 @@
 		new am.Module ( {
 			init: function () {
 				return {
-					list: []
+					list: [],
+					categoryName: "",
+					posts: []
 				};
 			},
 			mounted: function ( event ) {
-				console.log ( 222 );
 				var self = this;
-				event.on ( "deliverToc", function ( list ) {
+				event.on ( "deliverToc", function ( list, posts, categoryName ) {
 					self.state.list = list;
+					self.state.categoryName = categoryName;
+					self.state.posts = posts;
 				} );
 			}
 		} );

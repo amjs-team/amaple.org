@@ -1,6 +1,6 @@
 ---
 title: 启动路由
-tags: Amaple教程
+categories: 基础
 ---
 # 启动路由
 开始编写具体的代码前，首先需启动单页模式并进行简单配置。在`src/index.html`中引入amaple.js框架文件后我们就可以使用`am`这个全局对象。我们在开发包的`src/config.js`文件中调用`am.startRouter`函数并传入一个Object对象进行启动路由并配置单页应用。首先我们来配置url风格：

@@ -1,6 +1,6 @@
 ---
 title: 模块
-tags: Amaple教程
+categories: 基础
 ---
 # 模块
 正如它的名字，模块用于amaplejs单页应用的页面分割，所有的跳转更新和代码编写都是以模块为单位的。

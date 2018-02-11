@@ -7698,8 +7698,16 @@ function initState(states, context) {
 				} else if (type$1(newVal) === "array") {
 					var newValBackup = newVal;
 					newVal = initArray(newVal, subs, context);
-					if (state.nodeMap) {
-						newVal.nodeMap = newValBackup;
+					if (state.nodeMaps) {
+						Object.defineProperty(newVal, "nodeMaps", { value: [], writable: true, configurable: true, enumeratable: false });
+						newVal.nodeMaps.index = 0;
+
+						foreach(state.nodeMaps, function () {
+
+							// 需复制不同的多份相同数组
+							// 以便对它们的操作都是独立的
+							newVal.nodeMaps.push(newValBackup.concat ());
+						});
 					}
 				}
 
@@ -7808,8 +7816,10 @@ function initArray(array, subs, context) {
 				var res = nativeMethod.apply(this, args);
 
 				// 如果此数组映射了dom元素，则也需对此映射数组做出改变
-				if (this.nodeMap) {
-					nativeMethod.apply(this.nodeMap, args);
+				if (this.nodeMaps) {
+					foreach(this.nodeMaps, function (nodeMap) {
+						nativeMethod.apply(nodeMap, args);
+					});
 				}
 
 				// 更新视图
@@ -8704,6 +8714,13 @@ var _for = {
 
         // 初始化视图时将模板元素替换为挂载后元素
         if (elem.parent) {
+            if (!iterator.nodeMaps) {
+
+                // 创建数组的映射vnodes maps
+                Object.defineProperty(iterator, "nodeMaps", { value: [], writable: true, configurable: true, enumeratable: false });
+                iterator.nodeMaps.index = 0;
+            }
+
             fragment.appendChild(this.startNode);
 
             var nodeMap = [];
@@ -8717,12 +8734,15 @@ var _for = {
             fragment.appendChild(this.endNode);
             elem.parent.replaceChild(fragment, elem);
 
-            // 创建数组的映射vnodes map
-            Object.defineProperty(iterator, "nodeMap", { value: nodeMap, writable: true, configurable: true, enumeratable: false });
+            iterator.nodeMaps.push(nodeMap);
         } else {
+            var _nodeMap = iterator.nodeMaps[iterator.nodeMaps.index++];
+
+            // 循环更新结束后需重置index，以便下次更新时可通过index再次循环更新
+            iterator.nodeMaps.index = iterator.nodeMaps.index < iterator.nodeMaps.length ? iterator.nodeMaps.index : 0;
 
             // 改变数据后更新视图
-            foreach(iterator.nodeMap, function (val, index) {
+            foreach(_nodeMap, function (val, index) {
                 var itemNode = void 0;
 
                 // 在映射数组中找到对应项时，使用该项的key创建vnode
@@ -8751,7 +8771,7 @@ var _for = {
                     }
                 } else {
                     itemNode = createVNode(_this, val, index, {});
-                    iterator.nodeMap.splice(index, 1, itemNode);
+                    _nodeMap.splice(index, 1, itemNode);
                 }
 
                 fragment.appendChild(itemNode);

@@ -1,6 +1,6 @@
 ---
 title: 开始
-tags: Amaple教程
+categories: 基础
 ---
 # **Amaple · 体验优先的JavaScript单页框架**
 **Amaple** ([点此查看Github仓库](https://github.com/amjs-team/amaple))是专为单页web应用而设计的基于页面模块化的JavaScript框架，它可使开发者快速开发单页web应用。 [**Amaple**](https://github.com/amjs-team/amaple) 其实由** “A maple”(一片枫叶) **组合而成，它就像Web前端大森林中的一片枝叶，在享受这片森林呵护的同时也为森林增添一丝色彩，因此， [**Amaple**](https://github.com/amjs-team/amaple) 选择了拥抱这片大森林，它的插件功能除了可使用自身规范的插件外，还支持所有 [**AMD**(点击了解详情)](https://github.com/amdjs/amdjs-api/wiki/AMD-%28%E4%B8%AD%E6%96%87%E7%89%88%29)和 [**IIFE**(点击了解详情)](https://segmentfault.com/a/1190000003985390) 规范的第三方js库，在`rollup`、`webpack`、`browserify`等模块打包工具流行的今天，这也意味着`lodash`、`socket.io`等几乎所有的第三方js库都可以与 [**Amaple**](https://github.com/amjs-team/amaple) 协同运作，同时也支持旧式的IIFE格式js库。此外， [**Amaple**](https://github.com/amjs-team/amaple) 还拥有 **高级虚拟DOM功能、模块化、MVVM及原生Web化设计** 等特性，即使初级前端开发也能顺利掌握和使用，这也充分体现了 [**Amaple**](https://github.com/amjs-team/amaple) **“体验优先” ** 的设计理念。

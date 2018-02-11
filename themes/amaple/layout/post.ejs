@@ -15,17 +15,20 @@
 	<script>
 		new am.Module ( {
 			init: function ( event ) {
-				console.log ( 111 );
-				event.emit ( "deliverToc", <%-tocToArray ( toc ( page.content, { class: "am", list_number: false } ) ) %> );
+				event.emit ( "deliverToc", 
+					<%-tocToArray ( toc ( page.content, { class: "am", list_number: false } ) ) %>,
+					<%-getPostsByCategory ( site.posts, page.categories.data [ 0 ].name, transformLink, config.permalink ) %>,
+					"<%-page.categories.data [ 0 ].name %>"
+				);
 
 				return {
 					prev: {
 						title: "<%-(page.prev || {}).title %>",
-						path: "<%-tranformLink ( (page.prev || {}).path || '', config.permalink ) %>"
+						path: "<%-transformLink ( (page.prev || {}).path || '', config.permalink ) %>"
 					},
 					next: {
 						title: "<%-(page.next || {}).title %>",
-						path: "<%-tranformLink ( (page.next || {}).path || '', config.permalink ) %>"
+						path: "<%-transformLink ( (page.next || {}).path || '', config.permalink ) %>"
 					}
 				};
 			}
