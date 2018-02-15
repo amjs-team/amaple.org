@@ -2,6 +2,7 @@ am.class ( "AmBtn" ).extends ( am.Component ) ( {
 	init: function () {
 		return {
 			href: this.props.href || "#",
+			target: this.props.target,
 			type: this.props.type,
 			img: this.props.img,
 			imgWidth: this.props.imgWidth || 16,
@@ -29,7 +30,7 @@ am.class ( "AmBtn" ).extends ( am.Component ) ( {
 		}
 
 		this.template ( [
-			'<a href="{{ href }}" class="am-btn">',
+			'<a href="{{ href }}" target="{{ target }}" class="am-btn">',
 				'<img :if="img && !imgPos" src="{{ img }}" />',
 				'{{ subElements.default }}',
 				'<img :if="img && imgPos" src="{{ img }}" />',

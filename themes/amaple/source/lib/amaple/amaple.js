@@ -1,5 +1,5 @@
 /**
- * AmapleJS v1.0.6
+ * AmapleJS v1.1.5
  * (c) 2018-2018 JOU https://amaple.org
  * License: MIT
  */
@@ -961,6 +961,8 @@ extend(NodeTransaction.prototype, {
  */
 	collect: function collect(moduleNode) {
 		var find = false;
+
+		// 可能在一个生命周期函数中会有多个模块的视图更新
 		foreach(this.transactions, function (transaction) {
 			if (transaction[0] === moduleNode) {
 				find = true;
@@ -5324,24 +5326,28 @@ var hashHistory = {
  	http://amaple.org/######
  */
 	buildURL: function buildURL(path, mode) {
+		var rquery = /\?.*?$/;
 		var host = window.location.host,
+		    pathname = window.location.hash.replace(rquery, ""),
 		    search = "";
 		path = path.replace(/\s*http(?:s)?:\/\/(.+?\/|.+)/, function (match, rep) {
 			host = rep;
 			return "";
-		}).replace(/\?.*?$/, function (match) {
+		}).replace(rquery, function (match) {
 			search = match;
 			return "";
 		});
 
-		var pathname = (window.location.hash || "#/").replace(path.substr(0, 1) === "/" ? /#(.*)$/ : /\/([^\/]*)$/, function (match, rep) {
-			return match.replace(rep, "") + path;
-		});
+		if (path !== "") {
+			pathname = (pathname || "#/").replace(path.substr(0, 1) === "/" ? /#(.*)$/ : /\/([^\/]*)$/, function (match, rep) {
+				return match.replace(rep, "") + path;
+			});
+		}
 
 		return {
 			host: host,
 			search: search,
-			pathname: pathname.substr(1)
+			pathname: pathname.substr(0, 1) === "#" ? pathname.substr(1) : pathname
 		};
 	},
 
@@ -5593,6 +5599,7 @@ var amHistory = {
 
 	initHistory: function initHistory(historyMode) {
 		if (!this.history) {
+			this.mode = historyMode;
 
 			this.history = (historyMode === HASH ? hashHistory : historyMode === BROWSER ? browserHistory : { init: noop }).init();
 		}
@@ -7679,16 +7686,17 @@ function cloneNodeMaps(originVal, newVal, newValBackup) {
 function initMethod(methods, context) {
 	foreach(methods, function (method, key) {
 		context[key] = function () {
-			var nt = new NodeTransaction().start();
-
 			for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
 				args[_key] = arguments[_key];
 			}
 
-			method.apply(context, args);
+			var nt = new NodeTransaction().start(),
+			    ret = method.apply(context, args);
 
 			// 提交节点更新事物，更新所有已更改的vnode进行对比
 			nt.commit();
+
+			return ret;
 		};
 	});
 }
@@ -8800,6 +8808,11 @@ var _for = {
                     }
                 } else {
                     itemNode = createVNode(_this, val, index, {});
+
+                    var scopedCssObject = _this.tmpl.module.scopedCssObject;
+                    if (scopedCssObject) {
+                        appendScopedAttr(itemNode, scopedCssObject.selectors, scopedCssObject.identifier);
+                    }
                     _nodeMap.splice(index, 1, itemNode);
                 }
 
@@ -9751,13 +9764,13 @@ function getRoutingElem(elem, rootElem, eventType) {
     URL doc:
     http://amaple.org/######
 */
-function routing(e) {
+function routingHandler(e) {
     var eventType = e.type.toLowerCase(),
         _getRoutingElem = getRoutingElem(e.target, this, eventType),
         elem = _getRoutingElem.elem,
         path = _getRoutingElem.path;
 
-    if (path && !/#/.test(path)) {
+    if (path && !/http(?:s)?:\/\/|mailto:|#/i.test(path)) {
 
         var method = eventType === "submit" ? (attr(elem, "method") || "POST").toUpperCase() : "GET",
             buildedPath = amHistory.history.buildURL(path),
@@ -9772,6 +9785,9 @@ function routing(e) {
                 e.preventDefault();
             }
         }
+    } else if (/^#/.test(path) && amHistory.mode === HASH) {
+        e.preventDefault();
+        throw runtimeErr("redirect", "hash模式下不可使用形如'#...'的锚链接作为href的值");
     }
 }
 
@@ -9897,11 +9913,13 @@ function Module(moduleElem) {
 		this.param = currentRender.param;
 		this.get = parseGetQuery(currentRender.get);
 		this.post = currentRender.post;
+		this.scopedCssObject = currentRender.scopedCssObject;
 
 		// 参数传递过来后可移除，以免与下一次传递的参数混淆
 		delete currentRender.param;
 		delete currentRender.get;
 		delete currentRender.post;
+		delete currentRender.scopedCssObject;
 
 		// 将此Module对象保存到页面结构体的对应位置中
 		currentRender.module = this;
@@ -9956,12 +9974,8 @@ function Module(moduleElem) {
 		// 单页模式将会在compileModule编译的函数中对比更新dom
 		moduleElem.diff(moduleElemBackup).patch();
 	} else {
-		var scopedCssObject = Structure.getCurrentRender().scopedCssObject;
+		var scopedCssObject = this.scopedCssObject;
 		appendScopedAttr(moduleElem, scopedCssObject.selectors, scopedCssObject.identifier);
-
-		// 为带有href属性的vnode绑定点击事件
-		// 此函数只有在单页模式下才会被调用
-		// walkVDOM ( moduleElem, routingHandler );
 	}
 }
 
@@ -10710,9 +10724,12 @@ extend(Structure.prototype, {
                 structure.updateFn();
                 delete structure.updateFn;
             }
+
+            // 如果当前structure有updateFn时，它的子结构updateFn将会在它的updateFn内被调用
+            // 如果当前structure没有updateFn时，需遍历它的子结构查看是否有updateFn
             else if (structure.children && structure.children.length > 0) {
-                self.flush(structure.children);
-            }
+                    self.flush(structure.children);
+                }
         });
     }
 });
@@ -11008,7 +11025,7 @@ extend(Router, {
 
 
         // 如果path为redirect中的from，则不需加结尾的“/”匹配式
-        endRegexp = from === "redirect" ? "" : "(?:\\/)?";
+        endRegexp = from === "redirect" ? "$" : "(?:\\/)?";
 
         // 如果pathExpr为数组，则需预处理
         if (texpr === "array") {
@@ -11025,7 +11042,7 @@ extend(Router, {
         } else if (texpr === "string") {
 
             // 如果路径表达式为""时需在结尾增加"$"符号才能正常匹配到
-            endRegexp += pathExpr === "" || pathExpr === "/" ? "$" : "";
+            endRegexp += ( pathExpr === "" || pathExpr === "/" ? "$" : "" );
         }
 
         pathObj.regexp = new RegExp("^" + pathExpr.replace("/", "\\/").replace(/:([\w$]+)(?:(\(.*?\)))?/g, function (match, rep1, rep2) {
@@ -11119,6 +11136,7 @@ extend(Router, {
 
             foreach(route.routes, function (pathReg) {
                 var matchPath = void 0,
+                    modulePath = pathReg.modulePath,
                     isContinue = true;
 
                 if (route.hasOwnProperty("forcedRender")) {
@@ -11128,12 +11146,15 @@ extend(Router, {
                 if (matchPath = path.match(pathReg.path.regexp)) {
                     isContinue = false;
                     isMatch = true;
-                    entityItem.modulePath = pathReg.modulePath;
 
                     extra.param[route.name] = { data: {} };
                     foreach(pathReg.path.param, function (i, paramName) {
-                        extra.param[route.name].data[paramName] = matchPath[i] || "";
+                        var data = matchPath[i] || "";
+                        modulePath = modulePath.replace(new RegExp(":" + paramName, "g"), data);
+
+                        extra.param[route.name].data[paramName] = data;
                     });
+                    entityItem.modulePath = modulePath;
 
                     routes.push(entityItem);
                 }
@@ -11369,7 +11390,7 @@ function startRouter(routerConfig) {
 		return;
 	}
 	delete routerConfig.history;
-	event.on(document.body, "click submit", routing);
+	event.on(document.body, "click submit", routingHandler);
 
 	var plugin = routerConfig.plugin,
 	    loadPlugins = [];

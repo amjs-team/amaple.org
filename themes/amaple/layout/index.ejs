@@ -30,23 +30,26 @@
       component: "component__"
     },
     routes: function ( router ) {
+      router.redirect ("/doc", "/doc/first-step");
+      router.redirect ("/api", "/api/global-object");
+
       router.module ( "header" )
       .route ( ["/", "/:root"], "common/header" );
 
       router.module ()
       .route ( ["/", "/index"], "index" )
       .route ( "/doc", "doc", function ( childRouter ) {
-        childRouter.redirect ("", "first-step");
-        
         childRouter.module ( "menu" ).route ( ["", ":menu"], "common/menu" );
 
-        childRouter.module ().route ( "first-step", "first-step/index" )
-        .route ( "start-router", "start-router/index" )
-        .route ( "module", "module/index" );
+        childRouter.module ().route ( ":docName", ":docName/index" );
+      } )
+      .route ( "/api", "doc", function ( childRouter ) {
+        childRouter.module ( "menu" ).route ( ["", ":menu"], "common/menu" );
+        childRouter.module ().route ( ":apiName", ":apiName/index" );
       } );
 
       router.module ( "footer" )
-      .route ( ["/", "/:root"], "common/footer" );
+      .route ( ["/", "/:root/:docName"], "common/footer" );
     },
 
     plugin: [

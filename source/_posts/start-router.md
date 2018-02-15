@@ -1,10 +1,12 @@
 ---
 title: 启动路由
+date: 2018-02-14 18:19:17
 categories: 基础
+index: 2
 ---
 # 启动路由
 开始编写具体的代码前，首先需启动单页模式并进行简单配置。在`src/index.html`中引入amaple.js框架文件后我们就可以使用`am`这个全局对象。我们在开发包的`src/config.js`文件中调用`am.startRouter`函数并传入一个Object对象进行启动路由并配置单页应用。首先我们来配置url风格：
-```javascript
+```javascript javascript
 am.startRouter ( {
 
      // amaplejs中存在两种url模式，分别为
@@ -19,7 +21,7 @@ am.startRouter ( {
 ## 配置一个简单的匹配路由
 正如我们所知到的，不同url将会显示不同的页面，在这里我们也需告诉框架一个url应该显示哪几个模块，其实这也是很简单的，具体分为两步：
 * [1].在入口html文件（即`src/index.html`文件）内定义一个模块节点，来告诉框架请求的模块内容放到页面的哪个位置
-```html
+```html html
 <body>
      <!-- 在<body>内添加一个<div>并给它添加:module属性，这样就指定了一个不具名的模块节点 -->
      <!-- 你可以将模块节点理解为模块渲染输出的容器，:module属性为空值表示不具名的模块节点，且任何标签都可以作为模块节点 -->
@@ -27,7 +29,7 @@ am.startRouter ( {
 </body>
 ```
 * [2].在`am.startRouter`函数中为模块设置相关参数，在函数参数内分别添加`baseURL`、`module`和`routes`参数，如下：
-```javascript
+```javascript javascript
 am.startRouter( {
     baseURL : {
           // 为模块文件设置base路径，所有的模块文件请求路径都将基于“/module”目录，不设置时默认“/”

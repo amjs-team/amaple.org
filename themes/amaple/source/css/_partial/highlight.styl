@@ -4,13 +4,28 @@ Style with support for rainbow parens
 
 .highlight
     color: #d1d9e1
-    background: #474949
+    background: #f1f2f7
+    padding: 6px 16px
+    margin: 10px 0
+    border-radius: 5px
+    overflow: auto
+    font-size: 13px
+    position: relative
+    figcaption
+        position: absolute
+        right: 10px
+        top: 5px
+        span
+            color: #e6e6e6
     .code
+        .line
+            color: #9a9286
         .comment,
         .quote
-            color: #969896
+            color: #d4d4d4
             font-style: italic
-
+        .params
+            color: #f3a140
         .keyword,
         .selector-tag,
         .literal,
@@ -26,14 +41,12 @@ Style with support for rainbow parens
         .string,
         .doctag,
         .regexp
-            color: #8abeb7
-
+            color: #e56659
         .title,
         .name,
         .section,
         .built_in
-            color: #b5bd68
-
+            color: #f3a140
         .variable,
         .template-variable,
         .selector-id,
@@ -41,7 +54,6 @@ Style with support for rainbow parens
              color: #ffcc66
 
         .section,
-        .name,
         .strong
             font-weight: bold
 
@@ -60,7 +72,7 @@ Style with support for rainbow parens
 
         .attr,
         .attribute
-            color: #81a2be
+            color: #ddc155
 
         .emphasis
             font-style: italic

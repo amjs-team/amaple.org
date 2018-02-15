@@ -1,7 +1,7 @@
 <module>
 	<template>
 		<div class="footer-wrap{{ root ? '-other' : '' }}">
-			<a href="#" :if="root !== ''">教程不够清楚？点击编辑此页面</a>
+			<a href="https://github.com/amjs-team/amaple.org/blob/master/source/_posts/{{ title }}.md" target="_blank" :if="root !== ''">教程不够清楚？点击编辑此页面</a>
 			<a href="https://github.com/amjs-team/amaple/issues">提交issue</a>
 			<a href="#">联系Amaple-Team</a>
 			<a href="https://github.com/amjs-team/amaple">贡献代码</a>
@@ -17,10 +17,13 @@
 				var self = this;
 				return {
 					root: self.param.root,
+					title: self.param.docName
 				};
 			},
 			paramUpdated: function () {
+				console.log(this.param);
 				this.state.root = this.param.root;
+				this.state.title = this.param.docName;
 			}
 		} );
 	</script>

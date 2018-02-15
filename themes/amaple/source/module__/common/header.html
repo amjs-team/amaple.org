@@ -11,10 +11,10 @@
 			</ul>
 			<div id="lang-sel">
 				<img src="images/icon-lang.png">
-				<span >简体中文</span>
-				<select :onchange="changeLocale">
-					<option>简体中文</option>
-					<option>English</option>
+				<span >{{ locale }}</span>
+				<select :onchange="changeLocale" :ref="locale">
+					<option value="简体中文">简体中文</option>
+					<!-- <option value="English">English</option> -->
 				</select>
 			</div>
 		</div>
@@ -31,8 +31,9 @@
 				return {
 					nav: nav,
 					bgClass: "",
+					locale: "简体中文",
 					changeLocale: function ( e ) {
-						console.log ( e.target.value );
+						this.locale = e.target.value;
 					}
 				};
 			},
@@ -112,9 +113,10 @@
 			text-align: center;
 		}
 		ul li {
-			margin: 0 4%;
 			display: inline-block;
 			font-size: 15px;
+			width: 10%;
+			text-align: center;
 		}
 		#icon-am img {
 			vertical-align: -19px;
@@ -125,6 +127,7 @@
 			padding-top: 20px;
 		}
 		#lang-sel {
+			width: 7%;
 			position: absolute;
 			right: 5%;
 			top: 36px;

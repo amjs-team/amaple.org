@@ -1,0 +1,134 @@
+---
+title: 内置插件
+date: 2018-02-15 15:41:56
+categories: API
+index: 3
+---
+# 内置插件
+## util
+- **类型：**Object
+- **描述：**工具包
+- **对象属性：**
+    - **type(arg: any)**
+        - **类型：**Function
+        - **描述：**判断数据类型，与“typeof”关键字相比，它还可以判断null和Array两个数据类型
+        - **参数：**`(arg | any)`需判断类型的数据
+        - **返回值：**传入参数的数据类型
+    - **foreach(target: ArrayLike|Object, callback: Function)**
+        - **类型：**Function
+        - **描述：**循环遍历一个对象，使用方法与`array.forEach`类似。但它还可以遍历类数组如`Node.childNodes`、`Node.attributes`等，且当传入的参数不可遍历时将直接返回。参数`callback`为循环遍历时的回调函数，它分别接收遍历项的值、遍历下表、遍历变量本身三个参数，当回调函数返回`false`时将`break`结束本次循环，而且此时`foreach`执行结束后也将会返回一个`false`，这在结束多层循环遍历时很有用，开发者可以通过`return foreach(...)`再次推出上层循环。
+        - **参数：**
+            - `(target | ArrayLike/Object)`循环遍历的目标变量值
+            - `(callback | Function)`循环遍历时的回调函数，它分别接收遍历项的值、遍历下表、遍历变量本身三个参数，返回`false`可结束循环遍历
+        - **返回值：**无
+    - **isEmpty(object: Array|Object)**
+        - **类型：**Function
+        - **描述：**判断一个数组或对象是否为空，检查对象时它只会检查该对象本身的成员属性
+        - **参数：**`(object | Array/Object)`待判断的数组会对象
+        - **返回值：**空时为`true`，不空时为`false`
+    - **isPlainObject (object: Object)**
+        - **类型：**Function
+        - **描述：**判断一个对象是否为纯粹的`Object`数据对象
+        - **参数：**`(object | Object)`待判断对象
+        - **返回值：**是则返回`true`，不是则返回`false`
+    - **guid()**
+        - **类型：**Function
+        - **描述：**获取唯一标识
+        - **参数：**无
+        - **返回值：**唯一标识
+
+## http
+- **类型：**Object
+- **描述：**Ajax网络请求插件，它的对象函数`get`、`post`、`request`都实现了[Promise/A+规范](#)，在定义回调函数上，除了普通的异步回调函数传参外，还支持使用链式调用的方式来实现异步回调函数的调用，例如`http.get(...).done(function(result) {...}).fail(function(error){...})`或`http.get(...).then(function(result){}, function(error){...})`，来指定成功与失败的回调函数，如果在`Promise`对象上和回调函数传参上同时指定了回调函数，则会执行传参回调函数。成功回调函数`successHandler`将接收的参数为响应内容`response`、响应状态码`status`，响应状态内容`statusText`及自定义XHR对象`amXHR`：
+    - **`amXHR`对象成员函数：**
+        - **setRequestHeader(header: String, value: String)**
+            - **描述：**设置请求头，请求执行前设置有效
+            - **参数：**
+                - `(header | String)`请求头名称
+                - `(value | String)`请求头值
+            - **返回值：**无
+        - **getResponseHeader(header: String)**
+            - **描述：**获取返回头信息，请求响应后可获取
+            - **参数：**`(header | String)`返回头名称
+            - **返回值：**对应的返回头信息
+        - **getAllResponseHeaders()**
+            - **描述：**获取所有返回头信息，请求响应后可获取
+            - **参数：**无
+            - **返回值：**所有返回头信息
+        - **overrideMimeType(mimetype: String)**
+            - **描述：**设置mimeType，请求执行前设置有效
+            - **参数：**`(mimetype | String)`mimeType值
+            - **返回值：**无
+        - **abort(statusText: String)**
+            - **描述：**触发请求中断回调，在支持请求中断且请求响应前有效
+            - **参数：**`(statusText | String)`中断信息，开发者可在中断回调中的`statusText`获取到
+            - **返回值：**无
+- **对象函数：**
+    - **get(url: String, args?: String|Object, callback?: Function, dataType?: String)**
+        - **类型：Function
+        - **描述：**执行Ajax GET请求，它将返回一个`Promise`对象用于以链式调用的方式来实现异步回调函数
+        - **参数：**
+            - `(url | String)`请求url
+            - `(args? | String/Object)`get提交的数据，此参数传入String时以`k1=v1&k2=v2`的格式传入，传入`Object`时为一个数据对象
+            - `(callback? | Function)`请求成功回调函数
+            - `(dataType? | String)`设置响应内容的格式，可选为`TEXT`/`JSON`/`SCRIPT`/`JSONP`（可忽略大小写），默认为`TEXT`
+        - **返回值：**`Promise`对象
+    - **post(url: String, args?: String|Object, callback?: Function, dataType?: String)**
+        - **类型：**Function
+        - **描述：**执行Ajax POST请求，它将返回一个`Promise`对象用于以链式调用的方式来实现异步回调函数
+        - **参数：**
+            - `(url | String)`请求url
+            - `(args? | String、Object)`post提交的数据，此参数传入String时以`k1=v1&k2=v2`的格式传入，传入`Object`时为一个数据对象
+            - `(callback? | Function)`请求成功回调函数，如果传入此参数则以它为回调函数执行。它将接收的参数为响应内容`response`、响应状态码`status`，响应状态内容`statusText`及自定义XHR对象`amXHR`
+            - `(dataType? | String)`设置响应内容的格式，可选为`TEXT`/`JSON`/`SCRIPT`/`JSONP`（可忽略大小写），默认为`TEXT`
+        - **返回值：**`Promise`对象
+    - **request(options: Object)**
+        - **类型：**Function
+        - **描述：**执行Ajax请求，相比于get、post函数，它可以完成更复杂的请求操作，且此函数可直接在data属性中传入带有上传文件的form表单元素或FormData对象实现文件上传操作，当在低版本浏览器使用form表单元素上传时将自动使用隐藏`iframe`刷新的方式上传，但在支持`FormData`对象的浏览器中自动使用`FormData`对象实现文件上传
+        - **参数：**
+            - `(options | Object)`可选属性详情如下：
+                - `(method? | String)`请求类型，GET或POST，大小写不敏感，默认为GET
+                - `(url | String)` 请求地址
+                - `(data? | String)`提交的额外参数，可选为格式为`k1=v1&k2=v2`的字符串、`{k1:v1, k2:v2}`的数据对象、`FormData`对象及form表单元素对象，当data为form对象时，如果也提供了`src`参数则优先使用`src`参数当做url进行提交
+                - `(async? | Boolean)`是否异步请求，默认为`true`
+                - `(cache? | Boolean)`请求缓存，如果为`false`，则每次都会发送请求，默认为`true`
+                - `(contentType | String)`请求参数编码
+                - `(dataType? | String)`返回的数据类型，`TEXT`/`JSON`/`SCRIPT`/`JSONP`，大小写不敏感，默认为`TEXT`
+                - `(username? | String)`服务器认证用户名
+                - `(password? | String)`服务器认证密码
+                - `(mimeType? | String)`设置mimeType
+                - `(headers? | Object)`额外的请求头信息，为一个对象
+                - `(timeout? | Number)`请求超时时间
+                - `(beforeSend? | Function)`请求发送前回调，函数参数为`amXHR`对象、当前配置对象`options`
+                - `(success? | Function)`请求成功后回调，函数参数为`data`、`statusText`、`amXHR`对象
+                - `(error? | Function)`请求失败后回调，函数参数为`amXHR`对象、`statusText`
+                - `(complete? | Function)`请求完成后回调，函数参数为`amXHR`对象、`statusText`
+                - `(abort? | Function)`请求中断后回调，函数参数为`statusText`
+
+        - **返回值：**`Promise`对象
+
+## event
+- **类型：**Object
+- **描述：**自定义事件对象，支持跨模块触发事件
+- **对象函数：**
+    - **on(types: String, listener: Function, once?: Boolean)**
+        - **类型：**Function
+        - **描述：**绑定自定义事件，参数types以空格分隔开可同时绑定一个回调函数到多个事件类型上
+        - **参数：**
+            - `(types | String)`自定义事件名称，使用空格隔开可同时绑定一个监听函数到多个事件类型上
+            - `(listener | Function)`事件回调函数
+            - `(once? | Boolean)`是否只能触发一次，设置为`true`时，触发一次回调后将自动解除绑定
+        - **返回值：**无
+    - **emit(types: String)**
+        - **类型：**Function
+        - **描述：**触发自定义事件，当一个事件有多个回调函数时触发后将顺序执行多个回调函数
+        - **参数：**
+            - `(types | String)`自定义事件名称，使用空格隔开可同时触发多个事件
+        - **返回值：**无
+    - **remove(types: String, listener: Function)**
+        - **类型：**Function
+        - **描述：**解绑事件，可一次解绑多个类型的事件
+        - **参数：**
+            - `(types | String)`自定义事件名称，使用空格隔开可同时解绑多个事件
+            - `(listener | Function)`事件回调函数，必须与绑定事件时传入的回调函数相同才可成功解绑
+        - **返回值：**无

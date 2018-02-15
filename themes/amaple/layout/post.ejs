@@ -2,12 +2,12 @@
 	<template>
 		<%-page.content %>
 		<div id="page-nav">
-			<a class="nav prev" href="{{ prev.path }}" :if="prev.title">
-				<img src="/images/arrow.png">
-				<span class="title-color">{{ prev.title }}</span>
-			</a>
 			<a class="title-color nav next" href="{{ next.path }}" :if="next.title">
+				<img src="/images/arrow.png">
 				<span class="title-color">{{ next.title }}</span>
+			</a>
+			<a class="nav prev" href="{{ prev.path }}" :if="prev.title">
+				<span class="title-color">{{ prev.title }}</span>
 				<img src="/images/arrow.png">
 			</a>
 		</div>
@@ -15,8 +15,9 @@
 	<script>
 		new am.Module ( {
 			init: function ( menu ) {
-				menu.state.list = <%-tocToArray ( toc ( page.content, { class: "am", list_number: false } ) ) %>;
-				menu.state.posts = <%-getPostsByCategory ( site.posts, page.categories.data [ 0 ].name, transformLink, config.permalink ) %>;
+				var list = <%-tocToArray ( toc ( page.content, { class: "am", list_number: false } ) ) %>;
+				menu.state.list = list.length > 0 ? list : [ { children: [] } ];
+				menu.state.posts = <%-getPostsByCategory ( site.posts, page.title, page.categories.data [ 0 ].name, transformLink, config.permalink ) %>;
 				menu.state.categoryName = "<%-page.categories.data [ 0 ].name %>";
 
 				return {
@@ -29,6 +30,11 @@
 						path: "<%-transformLink ( (page.next || {}).path || '', config.permalink ) %>"
 					}
 				};
+			},
+			queryUpdated: function () {
+				var scrollTop = document.querySelector ( "#" + this.get.target ).offsetTop - 10;
+				document.documentElement.scrollTop = scrollTop;
+				document.body.scrollTop = scrollTop;
 			}
 		} );
 	</script>
@@ -39,6 +45,10 @@
 		}
 		.nav {
 			font-size: 16px;
+			border: none;
+		}
+		.nav:hover {
+			border: none;
 		}
 		.nav img {
 			width: 18px;
@@ -46,17 +56,17 @@
 			vertical-align: middle;
 		}
 		.prev {
+			float: right;
+		}
+		.next {
 			float: left;
 		}
-		.prev img {
+		.next img {
 			transform: rotate(180deg);
 			-ms-transform: rotate(180deg);
 			-moz-transform: rotate(180deg);
 			-webkit-transform: rotate(180deg);;
 			-o-transform: rotate(180deg);
-		}
-		.next {
-			float: right;
 		}
 	</style>
 </module>

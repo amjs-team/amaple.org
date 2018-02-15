@@ -4,23 +4,23 @@ language: zh-cn
 
 # main menu navigation
 menu:
-  # Follow: /follow
-  Join: /doc/start-router
-  Document: /doc/
+  # follow: /follow
+  # join: /join
+  Document: /doc
   home: /
   API: /api
-  # Service: /service
-  Communication: /communication
+  # service: /service
+  # communication: /communication
 
 # Miscelaneous
 favicon: /favicon.ico
 
 # stylesheets loaded in the <head>
 stylesheets:
-  - /css/reset.css
-  - /css/amaple.css
-  - /css/highlight.css
+  - css/reset.css
+  - css/amaple.css
+  - css/post.css
 
 # scripts loaded in the end of the body
 scripts:
-  - /lib/amaple/amaple.js
+  - lib/amaple/amaple.js
