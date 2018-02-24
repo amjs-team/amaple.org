@@ -1,6 +1,6 @@
 <module :title="<%=page.title%> · Amaple">
 	<template>
-		<%-page.content %>
+		<div><%-page.content %></div>
 		<div id="page-nav">
 			<a class="title-color nav next" href="{{ next.path }}" :if="next.title">
 				<img src="/images/arrow.png">

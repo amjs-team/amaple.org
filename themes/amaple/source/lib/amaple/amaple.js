@@ -4603,6 +4603,24 @@ function trimHTML(htmlString) {
 }
 
 /**
+	scrollTop ( position: Number )
+
+	Return Type:
+	void
+
+	Description:
+	设置窗口位置
+
+	URL doc:
+	http://amaple.org/######
+*/
+function scrollTop(position) {
+	position = window.parseInt(position) || 0;
+	document.documentElement.scrollTop = position;
+	document.body.scrollTop = position;
+}
+
+/**
 	Loader ( load: Object )
 
 	Return Type:
@@ -6017,7 +6035,7 @@ function compileModule(moduleString) {
 		////////////////////////////////////////////////////////
 		/// 构造编译函数
 		var buildView = "args.signCurrentRender();\n\t\t\tvar nt=new args.NodeTransaction().start ();\n\t\t\tnt.collect(args.moduleNode);\n\t\t\targs.moduleNode.html(args.moduleFragment);";
-		moduleString = "";
+		moduleString = "args.start();";
 		if (!isEmpty(scriptPaths)) {
 			var addToWindow = "",
 			    delFromWindow = "";
@@ -6033,9 +6051,9 @@ function compileModule(moduleString) {
 				scriptPaths[i] = "\"" + (componentBaseURL + path) + "\"";
 			});
 
-			moduleString += "args.require([" + scriptPaths.join(",") + "],function(" + scriptNames.import.join(",") + "){\n\t\t\t\t" + addToWindow + "\n\t\t\t\t" + buildView + "\n\t\t\t\t" + parses.script + ";\n\t\t\t\t" + delFromWindow + "\n\t\t\t\tnt.commit();\n\t\t\t\targs.flushChildren();\n\t\t\t}," + TYPE_COMPONENT + ");";
+			moduleString += "args.require([" + scriptPaths.join(",") + "],function(" + scriptNames.import.join(",") + "){\n\t\t\t\t" + addToWindow + "\n\t\t\t\t" + buildView + "\n\t\t\t\t" + parses.script + ";\n\t\t\t\t" + delFromWindow + "\n\t\t\t\targs.end();\n\t\t\t}," + TYPE_COMPONENT + ");";
 		} else {
-			moduleString += buildView + "\n\t\t\t" + parses.script + ";\n\t\t\tnt.commit();\n\t\t\targs.flushChildren();";
+			moduleString += buildView + "\n\t\t\t" + parses.script + ";\n\t\t\targs.end();";
 		}
 	}
 
@@ -7690,13 +7708,7 @@ function initMethod(methods, context) {
 				args[_key] = arguments[_key];
 			}
 
-			var nt = new NodeTransaction().start(),
-			    ret = method.apply(context, args);
-
-			// 提交节点更新事物，更新所有已更改的vnode进行对比
-			nt.commit();
-
-			return ret;
+			return method.apply(context, args);
 		};
 	});
 }
@@ -8349,11 +8361,6 @@ extend(Component.prototype, {
             subElements = componentConstructor.initSubElements(componentVNode, subElementNames),
             tmpl = new Tmpl(componentVm, this.depComponents, this);
 
-        // 先清空后再添加上去进行对比
-        // 避免造成if、else-if、for指令在对比时出错
-        // vfragmentBackup.clear ();
-        // clear ( vfragmentBackup.node );
-
         // 解析组件并挂载数据
         this.references = {};
         tmpl.mount(vfragment, false, Tmpl.defineScoped(subElements, componentVNode, false));
@@ -8379,7 +8386,6 @@ extend(Component.prototype, {
 
         // 初始化生命周期
         componentConstructor.initLifeCycle(this, componentVNode, moduleObj);
-        // vfragment.diff ( vfragmentBackup ).patch ();
     },
 
 
@@ -9139,7 +9145,7 @@ var on = {
 
         this.type = exprMatch[1];
         this.attrExpr = "on" + this.type;
-        this.expr = "function ( " + event$$1 + " ) {\n            self.addScoped ();\n\t\t\t" + listener + ";\n            self.removeScoped ();\n\t\t}";
+        this.expr = "function (" + event$$1 + ") {\n            self.addScoped ();\n\t\t\t" + listener + ";\n            self.removeScoped ();\n\t\t}";
     },
 
 
@@ -9156,7 +9162,11 @@ var on = {
         http://amaple.org/######
     */
     update: function update(listener) {
-        this.node.bindEvent(this.type, listener);
+        this.node.bindEvent(this.type, function (e) {
+            var nt = new NodeTransaction().start();
+            listener(e);
+            nt.commit();
+        });
     }
 };
 
@@ -9855,13 +9865,35 @@ function findParentVm(elem) {
 function initModuleLifeCycle(module, vmData) {
 
 	// Module生命周期
-	var lifeCycle = ["queryUpdated", "paramUpdated", "unmount"];
+	var lifeCycle = ["mounted", "queryUpdated", "paramUpdated", "unmount"];
 
 	module.lifeCycle = {};
 	foreach(lifeCycle, function (cycleItem) {
 		module.lifeCycle[cycleItem] = vmData[cycleItem] || noop;
 		delete vmData[cycleItem];
 	});
+}
+
+/**
+    fireModuleLifeCycle ( cycleFunc )
+    
+    Return Type:
+    void
+    
+    Description:
+    调用模块对象的生命周期函数
+    该函数主要为封装虚拟DOM更新事物的提交操作
+    
+    URL doc:
+    http://amaple.org/######
+*/
+function fireModuleLifeCycle(module, cycleName) {
+	var nt = new NodeTransaction().start();
+	module.lifeCycle[cycleName].apply(module, cache.getDependentPlugin(module.lifeCycle[cycleName]));
+
+	// 提交节点更新事物，更新所有已更改的vnode进行对比
+	// 对比新旧vnode计算出差异并根据差异更新到实际dom中
+	nt.commit();
 }
 
 /**
@@ -9962,21 +9994,25 @@ function Module(moduleElem) {
 	// 普通模式下，如果parent为对象时表示此模块不是最上层模块，不需挂载
 	tmpl.mount(moduleElem, Structure.currentPage ? false : !parent);
 
-	// 调用mounted钩子函数
-	(vmData.mounted || noop).apply(this, cache.getDependentPlugin(vmData.mounted || noop));
-
 	/////////////////////////////////
 	/////////////////////////////////
-	if (devMode === DEVELOP_COMMON) {
+	if (devMode === DEVELOP_SINGLE) {
 
-		// 普通模式下才会在Module内对比新旧vnode计算出差异
-		// 并根据差异更新到实际dom中
-		// 单页模式将会在compileModule编译的函数中对比更新dom
-		moduleElem.diff(moduleElemBackup).patch();
-	} else {
+		// 单页模式下对模块内的元素添加局部样式
+		// 此操作必须在tmpl.mounted()后执行
+		// 以避免"{{ ... }}"作用于class、id等属性上导致无法添加局部属性的错误
 		var scopedCssObject = this.scopedCssObject;
 		appendScopedAttr(moduleElem, scopedCssObject.selectors, scopedCssObject.identifier);
+
+		NodeTransaction.acting && NodeTransaction.acting.commit();
+	} else {
+
+		// Module内对比新旧vnode计算出差异，并根据差异更新到实际dom中
+		moduleElem.diff(moduleElemBackup).patch();
 	}
+
+	// 调用mounted钩子函数
+	this.mounted();
 }
 
 extend(Module.prototype, {
@@ -10001,6 +10037,21 @@ extend(Module.prototype, {
 
 
 	/**
+ mounted ()
+ Return Type:
+ void
+ Description:
+ 模块生命周期hook
+ 模块完成挂载并更新实际dom后调用
+ URL doc:
+ http://amaple.org/######
+ */
+	mounted: function mounted() {
+		fireModuleLifeCycle(this, "mounted");
+	},
+
+
+	/**
  queryUpdated ()
  Return Type:
  void
@@ -10011,12 +10062,7 @@ extend(Module.prototype, {
  http://amaple.org/######
  */
 	queryUpdated: function queryUpdated() {
-		var nt = new NodeTransaction().start();
-		this.lifeCycle.queryUpdated.apply(this, cache.getDependentPlugin(this.lifeCycle.queryUpdated));
-
-		// 提交节点更新事物，更新所有已更改的vnode进行对比
-		// 对比新旧vnode计算出差异并根据差异更新到实际dom中
-		nt.commit();
+		fireModuleLifeCycle(this, "queryUpdated");
 	},
 
 
@@ -10031,9 +10077,7 @@ extend(Module.prototype, {
  http://amaple.org/######
  */
 	paramUpdated: function paramUpdated() {
-		var nt = new NodeTransaction().start();
-		this.lifeCycle.paramUpdated.apply(this, cache.getDependentPlugin(this.lifeCycle.paramUpdated));
-		nt.commit();
+		fireModuleLifeCycle(this, "paramUpdated");
 	},
 
 
@@ -10111,11 +10155,19 @@ function ModuleLoader(nextStructure, param, get, post) {
 	this.get = get;
 	this.post = post;
 
-	// 等待加载完成的页面模块，每加载完成一个页面模块都会将此页面模块在waiting对象上移除，当waiting为空时则表示相关页面模块已全部加载完成
+	// 等待加载完成的页面模块
+	// 每加载完成一个页面模块都会将此页面模块在waiting数组上移除
+	// 当waiting为空时则表示相关页面模块已全部加载完成
 	this.waiting = [];
 
+	// 等待更新完成的页面模块
+	// 每更新完成一个页面模块都会将此页面模块在updated数组上移除
+	// 当updated为空时则表示相关页面模块已全部更新完成
+	// 此时可做一些模块更新完成的操作
+	this.updated = [];
+
 	// 模块更新函数上下文
-	this.moduleUpdateContext = [];
+	// this.moduleUpdateContext = [];
 
 	// 加载错误时会将错误信息保存在此
 	this.moduleError = null;
@@ -10169,6 +10221,20 @@ extend(ModuleLoader.prototype, {
 		// 如果等待队列已空则立即刷新模块
 		if (isEmpty(this.waiting)) {
 			this.flush();
+		}
+	},
+	addUpdated: function addUpdated(name) {
+		this.updated.push(name);
+	},
+	delUpdated: function delUpdated(name) {
+		var pointer = this.updated.indexOf(name);
+		if (pointer !== -1) {
+			this.updated.splice(pointer, 1);
+		}
+
+		// 如果等待队列已空则立即刷新模块
+		if (isEmpty(this.updated)) {
+			ModuleLoader.finish();
 		}
 	},
 
@@ -10378,7 +10444,8 @@ extend(ModuleLoader, {
 		//////////////////////////////////////////////////
 		//////////////////////////////////////////////////
 		//////////////////////////////////////////////////
-		var baseURL = configuration.getConfigure("baseURL").module,
+		var thisLoader = this,
+		    baseURL = configuration.getConfigure("baseURL").module,
 		    suffix = configuration.getConfigure("moduleSuffix");
 		path = path.substr(0, 1) === "/" ? baseURL.substr(0, baseURL.length - 1) : baseURL + path;
 		path += suffix + args;
@@ -10389,8 +10456,10 @@ extend(ModuleLoader, {
 				Structure.signCurrentRender(currentStructure, param, args, data, scopedCssObject);
 			};
 		},
-		    flushChildren = function flushChildren(route) {
+		    end = function end(route) {
 			return function () {
+
+				// 调用子模块的视图更新函数
 				if (type$1(route.children) === "array") {
 					foreach(route.children, function (child) {
 						if (child.updateFn) {
@@ -10399,6 +10468,10 @@ extend(ModuleLoader, {
 						}
 					});
 				}
+
+				// 移除已更新的模块
+				// 这将用于所有视图更新完成后的操作
+				thisLoader.delUpdated(moduleIdentifier);
 			};
 		};
 
@@ -10410,9 +10483,6 @@ extend(ModuleLoader, {
 				moduleNode = type$1(moduleNode) === "function" ? moduleNode() : moduleNode;
 				if (!moduleNode[identifierName]) {
 					moduleNode[identifierName] = moduleIdentifier;
-
-					// 调用render将添加的am-identifier同步到实际node上
-					moduleNode.render();
 				}
 
 				historyModule.updateFn(am, {
@@ -10421,7 +10491,10 @@ extend(ModuleLoader, {
 					NodeTransaction: NodeTransaction,
 					require: require,
 					signCurrentRender: signCurrentRender(historyModule.scopedCssObject),
-					flushChildren: flushChildren(this),
+					start: function start() {
+						thisLoader.addUpdated(moduleIdentifier);
+					},
+					end: end(this),
 					extend: extend
 				});
 			};
@@ -10481,7 +10554,10 @@ extend(ModuleLoader, {
 						NodeTransaction: NodeTransaction,
 						require: require,
 						signCurrentRender: signCurrentRender(scopedCssObject),
-						flushChildren: flushChildren(this),
+						start: function start() {
+							thisLoader.addUpdated(moduleIdentifier);
+						},
+						end: end(this),
 						extend: extend
 					});
 
@@ -10499,6 +10575,20 @@ extend(ModuleLoader, {
 				error(moduleNode, error);
 			});
 		}
+	},
+
+
+	/**
+ 	finish ()
+ 		Return Type:
+ 	void
+ 		Description:
+ 	所有模块视图更新完成后调用
+ 		URL doc:
+ 	http://amaple.org/######
+ */
+	finish: function finish() {
+		scrollTop(0);
 	}
 });
 
@@ -11024,15 +11114,17 @@ extend(Router, {
         var i = 1,
 
 
-        // 如果path为redirect中的from，则不需加结尾的“/”匹配式
-        endRegexp = from === "redirect" ? "$" : "(?:\\/)?";
+        // 如果path为redirect中的from，则直接添加结束符号
+        // ”/doc“可重定向到”/doc/first“，但”/doc/zero“不能重定向，否则可能重定向为”/doc/first/zero“而导致错误
+        endRegexp = "(?:\\/)?" + (from === "redirect" ? "$" : "");
 
         // 如果pathExpr为数组，则需预处理
         if (texpr === "array") {
 
             // 如果路径表达式为""时需在结尾增加"$"符号才能正常匹配到
             foreach(pathExpr, function (exprItem, i) {
-                if (exprItem === "" || exprItem === "/") {
+                exprItem = exprItem.substr(-1) === "/" ? exprItem.substr(0, exprItem.length - 1) : exprItem;
+                if (exprItem === "" && from !== "redirect") {
                     pathExpr[i] += "$";
                 }
             });
@@ -11040,9 +11132,10 @@ extend(Router, {
             pathExpr = "(" + pathExpr.join("|") + ")";
             i++;
         } else if (texpr === "string") {
+            pathExpr = pathExpr.substr(-1) === "/" ? pathExpr.substr(0, pathExpr.length - 1) : pathExpr;
 
             // 如果路径表达式为""时需在结尾增加"$"符号才能正常匹配到
-            endRegexp += ( pathExpr === "" || pathExpr === "/" ? "$" : "" );
+            endRegexp += pathExpr === "" && from !== "redirect" ? "$" : "";
         }
 
         pathObj.regexp = new RegExp("^" + pathExpr.replace("/", "\\/").replace(/:([\w$]+)(?:(\(.*?\)))?/g, function (match, rep1, rep2) {
