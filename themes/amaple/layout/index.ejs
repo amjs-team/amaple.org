@@ -64,6 +64,24 @@
         build: function () {
           return {};
         }
+      },
+      {
+        name: "checkPost",
+        build: function () {
+          return function ( prevOrNext, posts ) {
+            var find = false;
+            for ( var i in posts ) {
+              if ( posts [ i ].title === prevOrNext.title ) {
+                find = true;
+
+                break;
+              }
+            }
+
+            // 如果上一篇或下一篇文章不在此分类的文章中，则返回空数据
+            return find ? prevOrNext : { title: "", path: "" };
+          };
+        }
       }
     ] 
   } );

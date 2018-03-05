@@ -4585,7 +4585,9 @@ function trimHTML(htmlString) {
 
 	return htmlString.replace(rpreAndBlank, function (match, rep1, rep2) {
 		if (match.indexOf("pre") > -1) {
-			if (rep1 === undefined) {
+
+			// firefox稍低版本下没有匹配括号内容时为""
+			if (rep1 === undefined || rep1 === "") {
 				inPreNum++;
 				return match;
 			} else if (rep1.substr(0, 1) === "/" && inPreNum > 0) {
@@ -4600,24 +4602,6 @@ function trimHTML(htmlString) {
 			}
 		}
 	});
-}
-
-/**
-	scrollTop ( position: Number )
-
-	Return Type:
-	void
-
-	Description:
-	设置窗口位置
-
-	URL doc:
-	http://amaple.org/######
-*/
-function scrollTop(position) {
-	position = window.parseInt(position) || 0;
-	document.documentElement.scrollTop = position;
-	document.body.scrollTop = position;
 }
 
 /**
@@ -6035,7 +6019,7 @@ function compileModule(moduleString) {
 		////////////////////////////////////////////////////////
 		/// 构造编译函数
 		var buildView = "args.signCurrentRender();\n\t\t\tvar nt=new args.NodeTransaction().start ();\n\t\t\tnt.collect(args.moduleNode);\n\t\t\targs.moduleNode.html(args.moduleFragment);";
-		moduleString = "args.start();";
+		moduleString = "";
 		if (!isEmpty(scriptPaths)) {
 			var addToWindow = "",
 			    delFromWindow = "";
@@ -10102,6 +10086,84 @@ extend(Module.prototype, {
 	}
 });
 
+// 窗口滚动状态为初始化
+var SCROLL_INITIALIZATION = 0;
+
+// 模块加载状态为正在执行
+var MODULELOADER_EXECUTING = 1;
+
+var status = SCROLL_INITIALIZATION;
+var execting = false;
+var position = 0;
+
+/**
+	executeScrollStatus ()
+
+	Return Type:
+	void
+
+	Description:
+	将状态更改为模块执行状态
+
+
+	URL doc:
+	http://amaple.org/######
+*/
+function executeScrollStatus() {
+	status = MODULELOADER_EXECUTING;
+}
+
+/**
+	flushScroll ( scrollPosition: Number )
+
+	Return Type:
+	void
+
+	Description:
+	刷新窗口滚动位置
+
+
+	URL doc:
+	http://amaple.org/######
+*/
+function flushScroll(scrollPosition) {
+	if (scrollPosition === undefined) {
+		status = SCROLL_INITIALIZATION;
+		execting = false;
+	}
+
+	scrollPosition = window.parseInt(scrollPosition || position) || 0;
+	document.documentElement.scrollTop = scrollPosition;
+	document.body.scrollTop = scrollPosition;
+}
+
+/**
+	scrollTo ( position: Number )
+
+	Return Type:
+	void
+
+	Description:
+	滚动窗口位置
+	滚动窗口分别有两种状态：
+
+
+	URL doc:
+	http://amaple.org/######
+*/
+function scrollTo(scrollPosition) {
+	if (status === MODULELOADER_EXECUTING) {
+		if (execting === false) {
+			execting = true;
+			position = scrollPosition;
+		}
+	}
+
+	if (status === SCROLL_INITIALIZATION) {
+		flushScroll(scrollPosition);
+	}
+}
+
 /**
 	compareArgs ( newArgs: Array, originalArgs: Array )
 
@@ -10189,58 +10251,50 @@ extend(ModuleLoader.prototype, {
  	void
  
  	Description:
- 	将等待加载完成的页面模块名放入context.waiting中
+ 	将等待的页面模块名放入context.waiting和context.updated中
+ 	context.waiting为等待加载的队列
+ 	context.updated为等待更新的队列
  
  	URL doc:
  	http://amaple.org/######
  */
 	addWaiting: function addWaiting(name) {
 		this.waiting.push(name);
+		this.updated.push(name);
 	},
 
 
 	/**
- 	delWaiting ( name: String )
+ 	delWaiting ( name: String, isWaitLoad )
  
  	Return Type:
  	void
  
  	Description:
- 	将已加载完成的页面模块从等待列表中移除
+ 	将已加载或更新完成的页面模块从等待列表中移除
  	如果等待队列已空则立即刷新模块
+ 		isWaitLoad为true时表示处理等待加载的队列
+ 	否则表示处理等待更新的队列
  
  	URL doc:
  	http://amaple.org/######
  */
-	delWaiting: function delWaiting(name) {
-		var pointer = this.waiting.indexOf(name);
+	delWaiting: function delWaiting(name, isWaitLoad) {
+		var waitingType = isWaitLoad ? "waiting" : "updated",
+		    pointer = this[waitingType].indexOf(name);
 		if (pointer !== -1) {
-			this.waiting.splice(pointer, 1);
+			this[waitingType].splice(pointer, 1);
 		}
 
 		// 如果等待队列已空则立即刷新模块
-		if (isEmpty(this.waiting)) {
-			this.flush();
-		}
-	},
-	addUpdated: function addUpdated(name) {
-		this.updated.push(name);
-	},
-	delUpdated: function delUpdated(name) {
-		var pointer = this.updated.indexOf(name);
-		if (pointer !== -1) {
-			this.updated.splice(pointer, 1);
-		}
-
-		// 如果等待队列已空则立即刷新模块
-		if (isEmpty(this.updated)) {
-			ModuleLoader.finish();
+		if (isEmpty(this[waitingType])) {
+			isWaitLoad ? this.flush() : ModuleLoader.finish();
 		}
 	},
 
 
 	/**
- 	update ( title: String )
+ 	updateTitle ( title: String )
  
  	Return Type:
  	void
@@ -10382,6 +10436,7 @@ extend(ModuleLoader.prototype, {
 			// 根据更新后的页面结构体渲染新视图
 			Structure.currentPage.update(location.nextStructure).render(location, nextStructureBackup);
 		} else {
+			executeScrollStatus();
 			this.nextStructure.flush();
 		}
 	}
@@ -10435,7 +10490,7 @@ extend(ModuleLoader, {
 			// 获取模块更新函数完成后在等待队列中移除
 			// 此操作需异步，否则将会实时更新模块
 			setTimeout(function () {
-				_this2.delWaiting(moduleIdentifier);
+				_this2.delWaiting(moduleIdentifier, true);
 			});
 
 			return false;
@@ -10471,7 +10526,7 @@ extend(ModuleLoader, {
 
 				// 移除已更新的模块
 				// 这将用于所有视图更新完成后的操作
-				thisLoader.delUpdated(moduleIdentifier);
+				thisLoader.delWaiting(moduleIdentifier, false);
 			};
 		};
 
@@ -10491,9 +10546,6 @@ extend(ModuleLoader, {
 					NodeTransaction: NodeTransaction,
 					require: require,
 					signCurrentRender: signCurrentRender(historyModule.scopedCssObject),
-					start: function start() {
-						thisLoader.addUpdated(moduleIdentifier);
-					},
 					end: end(this),
 					extend: extend
 				});
@@ -10502,7 +10554,7 @@ extend(ModuleLoader, {
 			// 获取模块更新函数完成后在等待队列中移除
 			// 此操作需异步，否则将会实时更新模块
 			setTimeout(function () {
-				_this2.delWaiting(moduleIdentifier);
+				_this2.delWaiting(moduleIdentifier, true);
 			});
 		} else {
 
@@ -10554,9 +10606,6 @@ extend(ModuleLoader, {
 						NodeTransaction: NodeTransaction,
 						require: require,
 						signCurrentRender: signCurrentRender(scopedCssObject),
-						start: function start() {
-							thisLoader.addUpdated(moduleIdentifier);
-						},
 						end: end(this),
 						extend: extend
 					});
@@ -10566,7 +10615,7 @@ extend(ModuleLoader, {
 				};
 
 				// 获取模块更新函数完成后在等待队列中移除
-				_this2.delWaiting(moduleIdentifier);
+				_this2.delWaiting(moduleIdentifier, true);
 			}).fail(function (amXHR, errorCode) {
 
 				// 保存错误信息并立即刷新
@@ -10588,7 +10637,8 @@ extend(ModuleLoader, {
  	http://amaple.org/######
  */
 	finish: function finish() {
-		scrollTop(0);
+		scrollTo(0);
+		flushScroll();
 	}
 });
 
@@ -11576,6 +11626,7 @@ cache.pushPlugin("event", {
 });
 cache.pushPlugin("http", http);
 cache.pushPlugin("Promise", Promise);
+cache.pushPlugin("scrollTo", scrollTo);
 
 // 导出amaple主对象
 var am = {

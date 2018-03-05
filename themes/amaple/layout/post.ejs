@@ -13,28 +13,38 @@
 		</div>
 	</template>
 	<script>
+		function scrollAnchor ( anchor, scrollTo ) {
+			var anchorElem = document.querySelector ( "#" + window.decodeURI ( anchor ) );
+			if ( anchorElem ) {
+				scrollTo ( anchorElem.offsetTop - 10 );
+			}
+		}
+
 		new am.Module ( {
-			init: function ( menu ) {
-				var list = <%-tocToArray ( toc ( page.content, { class: "am", list_number: false } ) ) %>;
+			init: function ( menu, checkPost ) {
+				var list = <%-tocToArray ( toc ( page.content, { class: "am", list_number: false } ) ) %>,
+					posts = <%-getPostsByCategory ( site.posts, page.title, page.categories.data [ 0 ].name, transformLink, config.permalink ) %>;
+
 				menu.state.list = list.length > 0 ? list : [ { children: [] } ];
-				menu.state.posts = <%-getPostsByCategory ( site.posts, page.title, page.categories.data [ 0 ].name, transformLink, config.permalink ) %>;
+				menu.state.posts = posts;
 				menu.state.categoryName = "<%-page.categories.data [ 0 ].name %>";
 
 				return {
-					prev: {
+					prev: checkPost ( {
 						title: "<%-(page.prev || {}).title %>",
 						path: "<%-transformLink ( (page.prev || {}).path || '', config.permalink ) %>"
-					},
-					next: {
+					}, posts ),
+					next: checkPost ( {
 						title: "<%-(page.next || {}).title %>",
 						path: "<%-transformLink ( (page.next || {}).path || '', config.permalink ) %>"
-					}
+					}, posts )
 				};
 			},
-			queryUpdated: function () {
-				var scrollTop = document.querySelector ( "#" + this.get.target ).offsetTop - 10;
-				document.documentElement.scrollTop = scrollTop;
-				document.body.scrollTop = scrollTop;
+			mounted: function ( scrollTo ) {
+				scrollAnchor ( this.get.target, scrollTo );
+			},
+			queryUpdated: function ( scrollTo ) {
+				scrollAnchor ( this.get.target, scrollTo );
 			}
 		} );
 	</script>
