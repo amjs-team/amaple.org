@@ -10,7 +10,6 @@ Style with support for rainbow parens
     border-radius: 5px
     overflow: auto
     font-size: 13px
-    position: relative
     figcaption
         position: absolute
         right: 10px
@@ -19,10 +18,10 @@ Style with support for rainbow parens
             color: #e6e6e6
     .code
         .line
-            color: #9a9286
+            color: #78808a
         .comment,
         .quote
-            color: #d4d4d4
+            color: #b1b1b1
             font-style: italic
         .params
             color: #f3a140
@@ -76,3 +75,6 @@ Style with support for rainbow parens
 
         .emphasis
             font-style: italic
+@media screen and (max-width: 768px)
+    .highlight
+        border-radius: 0

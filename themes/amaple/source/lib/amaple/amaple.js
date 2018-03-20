@@ -4474,6 +4474,45 @@ function getReference(references, refName) {
 	return reference;
 }
 
+function buildScopedCss(styles, scopedCssIdentifier, selectors) {
+	var styleString = "";
+	foreach(styles, function (styleItem) {
+
+		// 为css选择器添加范围属性限制
+		// 但需排除如@keyframes的项
+		if (styleItem.selector.substr(0, 1) !== "@") {
+			var selectorArray = [];
+			foreach(styleItem.selector.split(",").map(function (item) {
+				return item.trim();
+			}), function (selector) {
+
+				// 避免重复css选择器
+				if (selectors.indexOf(selector) <= -1) {
+					selectors.push(selector);
+				}
+				var pseudoMatch = selector.match(/:[\w-()\s]+|::selection/i);
+
+				// 如果有设置伪类，则需在伪类前面添加范围样式
+				if (pseudoMatch) {
+					selectorArray.push(selector.replace(pseudoMatch[0], "[" + scopedCssIdentifier + "]" + pseudoMatch[0]));
+				} else {
+					selectorArray.push(selector.trim() + "[" + scopedCssIdentifier + "]");
+				}
+			});
+			styleItem.selector = selectorArray.join(",");
+		}
+
+		// 当选择器为@media时 表示它内部也是css项，需要去递归调用buildScopedCss函数
+		if (/^@media/.test(styleItem.selector) && type$1(styleItem.content) === "array") {
+			styleItem.content = buildScopedCss(styleItem.content, scopedCssIdentifier, selectors);
+		}
+
+		styleString += styleItem.selector + "{" + styleItem.content + "}";
+	});
+
+	return styleString;
+}
+
 /**
 	stringToVNode ( htmlString: String, styles: Object, scopedCssObject: Object )
 
@@ -4499,32 +4538,9 @@ function stringToVNode(htmlString, styles, scopedCssObject) {
 	// 将解析的vnode转换为VFragment
 	vf = vf.nodeType === 11 ? vf : VFragment([vf]);
 	if (type$1(styles) === "array") {
-		styleString = "";
-
 		var scopedCssIdentifier = scopedCssObject.identifier = identifierPrefix + guid();
 		scopedCssObject.selectors = [];
-		foreach(styles, function (styleItem) {
-
-			// 为css选择器添加范围属性限制
-			// 但需排除如@keyframes的项
-			if (styleItem.selector.substr(0, 1) !== "@") {
-				var selectorArray = [];
-				foreach(styleItem.selector.split(",").map(function (item) {
-					return item.trim();
-				}), function (selector) {
-					scopedCssObject.selectors.push(selector);
-					var pseudoMatch = selector.match(/:[\w-()\s]+|::selection/i);
-					if (pseudoMatch) {
-						selectorArray.push(selector.replace(pseudoMatch[0], "[" + scopedCssIdentifier + "]" + pseudoMatch[0]));
-					} else {
-						selectorArray.push(selector.trim() + "[" + scopedCssIdentifier + "]");
-					}
-				});
-				styleItem.selector = selectorArray.join(",");
-			}
-
-			styleString += styleItem.selector + "{" + styleItem.content + "}";
-		});
+		styleString = buildScopedCss(styles, scopedCssIdentifier, scopedCssObject.selectors);
 
 		vstyle.attr("scoped", "");
 	}
@@ -5695,6 +5711,11 @@ var amHistory = {
 	}
 };
 
+function isEnd(match) {
+	return (/^}/.test(match)
+	);
+}
+
 /**
 	parseModuleAttr ( moduleStrng: String, parses: Object )
 
@@ -5780,6 +5801,85 @@ function removeCssBlank(css) {
 }
 
 /**
+	parseSiblingCss ( css: String )
+
+	Return Type:
+	Array
+	解析后的CSS AST数组
+
+	Description:
+	解析单层CSS样式
+	当碰到@media时，将会递归调用此函数
+
+	URL doc:
+	http://amaple.org/######
+*/
+
+function parseSiblingCss(css) {
+	var styles = [],
+	    rselector = /[^/@{}]+?/,
+	    rkeyframes = /@(?:-\w+-)?keyframes\s+\w+/,
+	    rmedia = /@media.*?/,
+	    rcssparser = new RegExp("\\s*(?:(" + rselector.source + "|" + rkeyframes.source + "|" + rmedia.source + ")\\s*{([\\s\\S]+?)}|})", "g");
+
+	var selectorItem = {},
+	    atContext = "",
+	    hierarchy = 0;
+
+	css.replace(rcssparser, function (match, selector, content) {
+		if (!atContext) {
+			content = content.trim();
+
+			// css选择器为普通选择器时
+			if (new RegExp("^" + rselector.source).test(selector)) {
+				styles.push({
+					selector: selector,
+					content: removeCssBlank(content)
+				});
+			}
+
+			// css选择器为@keyframes或@media时
+			else {
+					if (rkeyframes.test(selector)) {
+						atContext = "keyframes";
+					} else if (rmedia.test(selector)) {
+						atContext = "media";
+					}
+
+					styles.push(selectorItem);
+					selectorItem.selector = selector;
+					selectorItem.content = removeCssBlank(content + "}");
+				}
+		} else {
+			match = match.trim();
+			if (isEnd(match)) {
+				if (hierarchy > 0) {
+					selectorItem.content += match;
+					hierarchy--;
+				} else {
+
+					// 当css项为@media时，需对它的内部选择器做范围样式的处理
+					if (/media/.test(atContext)) {
+						selectorItem.content = parseSiblingCss(selectorItem.content);
+					}
+					atContext = "";
+					selectorItem = {};
+				}
+				return "";
+			}
+
+			// 表示层次，当层级为内层时遇到结束符将不会结束
+			if (new RegExp(rkeyframes.source + "|" + rmedia.source).test(selector)) {
+				hierarchy++;
+			}
+			selectorItem.content += removeCssBlank(match);
+		}
+	});
+
+	return styles;
+}
+
+/**
 	parseStyle ( moduleString: String, parses: Object )
 
 	Return Type:
@@ -5796,10 +5896,6 @@ function parseStyle(moduleString, parses) {
 
 	var rstyle = /<style(?:.*?)>([\s\S]*)<\/style>/i,
 	    risScoped = /^<style(?:.*?)scoped(?:.*?)/i,
-	    rselector = /[^/@{}]+?/,
-	    rkeyframes = /@(?:-\w+-)?keyframes\s+\w+/,
-	    rcssparser = new RegExp("\\s*(" + rselector.source + "|" + rkeyframes.source + ")\\s*{([\\s\\S]+?)}", "g"),
-	    ranimateScoped = /^(from|to|\d+%)\s*$/i,
 	    styleMatch = rstyle.exec(moduleString);
 
 	if (styleMatch) {
@@ -5810,38 +5906,7 @@ function parseStyle(moduleString, parses) {
 			style = (styleMatch[1] || "").trim();
 
 			// 解析每个css项并保存到parsers.style中
-			parses.style = [];
-			var keyframesItem = void 0;
-			style = style.replace(rcssparser, function (match, selector, content) {
-				content = content.trim();
-
-				// css选择器为普通选择器时
-				if (new RegExp("^" + rselector.source).test(selector)) {
-					if (ranimateScoped.test(selector)) {
-						keyframesItem.content += selector + "{" + removeCssBlank(content) + "}";
-					} else {
-						if (keyframesItem) {
-							parses.style.push(keyframesItem);
-							keyframesItem = undefined;
-						}
-						parses.style.push({
-							selector: selector,
-							content: removeCssBlank(content)
-						});
-					}
-				}
-
-				// css选择器为@keyframes时
-				else if (rkeyframes.test(selector)) {
-						if (keyframesItem) {
-							parses.style.push(keyframesItem);
-						}
-						keyframesItem = {
-							selector: selector,
-							content: removeCssBlank(content + "}")
-						};
-					}
-			});
+			parses.style = parseSiblingCss(style);
 		} else {
 
 			// 去除所有标签间的空格
@@ -5979,7 +6044,7 @@ function parseScript(moduleString, scriptPaths, scriptNames, parses) {
 function compileModule(moduleString) {
 
 	// 模块编译正则表达式
-	var rmodule = /^<module[\s\S]+<\/module>/i,
+	var rmodule = /<module[\s\S]+<\/module>/i,
 	    scopedCssObject = {};
 
 	var title = "",

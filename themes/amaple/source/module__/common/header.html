@@ -1,6 +1,6 @@
 <module>
 	<template>
-		<div class="header-wrap {{ bgClass }}">
+		<div class="header-wrap border-bottom {{ bgClass }}">
 			<ul>
 				<li class="menu" :for="(item, key) in nav" :if="key !== 'home'">
 					<a href="{{ item }}" class="title-color">{{ key }}</a>
@@ -21,7 +21,10 @@
 	</template>
 
 	<script type="text/javascript">
-		var criticalScroll = 150;
+		function isCritial () {
+			var criticalScroll = 150;
+			return ( document.body.scrollTop || document.documentElement.scrollTop || 0 ) > criticalScroll;
+		}
 
 		new am.Module ( {
 			init: function ( nav ) {
@@ -44,28 +47,26 @@
 				if ( self.param.root !== "" ) {
 					this.state.bgClass = "bg-show";
 				}
-				window.addEventListener ( "scroll", function () {
+
+				function scrollHandler () {
 					if ( self.param.root === "" ) {
-						var scrollTop = document.body.scrollTop || document.documentElement.scrollTop || 0;
-						if ( scrollTop > criticalScroll ) {
-							if ( headerStatus !== "bg-show" ) {
-								self.state.bgClass = headerStatus = "bg-show";
-							}
+						if ( isCritial () ) {
+							self.state.bgClass = headerStatus = "bg-show";
 						}
-						else if ( scrollTop <= criticalScroll ) {
-							if ( headerStatus === "bg-show" ) {
-								self.state.bgClass = headerStatus = "bg-hide";
-							}
+						else {
+							self.state.bgClass = headerStatus = "bg-hide";
 						}
 					}
-				} );
+				}
+				scrollHandler ();
+				window.addEventListener ( "scroll", scrollHandler );
 			},
 			paramUpdated: function () {
 				if ( this.param.root !== "" ) {
 					this.state.bgClass = "bg-show";
 				}
 				else {
-					this.state.bgClass = ( document.body.scrollTop || document.documentElement.scrollTop || 0 ) > criticalScroll && "bg-show" || "bg-hide";
+					this.state.bgClass = isCritial () && "bg-show" || "bg-hide";
 				}
 			}
 		} );
@@ -76,7 +77,6 @@
 			animation: bgshow 0.5s;
 			-webkit-animation: bgshow 0.5s;
 			background: #ffffff;
-			border-bottom: solid 1px #f0f1f4;
 		}
 		@keyframes bgshow
 		{
@@ -92,6 +92,7 @@
 			animation: bghide 0.5s;
 			-webkit-animation: bghide 0.5s;
 			background: rgba(255, 255, 255, 0);
+			border: none;
 		}
 		@keyframes bghide
 		{
@@ -108,7 +109,7 @@
 			position: relative;
 		}
 		ul {
-			margin: 20px auto;
+			margin: 10px 0;
 			overflow: hidden;
 			text-align: center;
 		}
@@ -122,15 +123,17 @@
 			vertical-align: -19px;
 			width: 42px;
 		}
-		.menu {
-			font-weight: bold;
-			padding-top: 20px;
+		@media screen and (min-width: 768px) {
+			.menu {
+				font-weight: bold;
+				padding-top: 20px;
+			}	
 		}
 		#lang-sel {
-			width: 7%;
+			width: 95px;
 			position: absolute;
 			right: 5%;
-			top: 36px;
+			top: 26px;
 		}
 		#lang-sel img {
 			width: 18px;
@@ -147,6 +150,17 @@
 			top: 0;
 			left: 0;
 			opacity: 0;
+		}
+		@media screen and (max-width: 768px) {
+			#icon-am img {
+				width: 28px;
+			}
+			.menu {
+				display: none;
+			}
+			#lang-sel {
+				display: none;
+			}
 		}
 	</style>
 </module>

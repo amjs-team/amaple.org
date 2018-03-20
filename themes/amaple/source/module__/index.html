@@ -6,15 +6,17 @@
 				<strong>体验优先的JavaScript单页框架</strong>
 			</div>
 			<div class="btn-wrap">
-				<span>
-					<am-btn type="fill" leftBg="#fcc64a" rightBg="#fb9d41">Amaple介绍</am-btn>
-				</span>
-				<span>
-					<am-btn img="images/icon-book.png" href="/doc" imgWidth="18" type="fill" leftBg="#fb9e41" rightBg="#fb7939">我要学习</am-btn>
-				</span>
-				<span>
-					<am-btn type="stroke" imgWidth="25" href="https://github.com/amjs-team/amaple" target="_blank" leftBg="#fac5b6" img="images/icon-gh.png">GitHub</am-btn>
-				</span>
+				<ul>
+					<li>
+						<am-btn type="fill" leftBg="#fcc64a" rightBg="#fb9d41">Amaple介绍</am-btn>
+					</li>
+					<li>
+						<am-btn img="images/icon-book.png" href="/doc" imgWidth="18" type="fill" leftBg="#fb9e41" rightBg="#fb7939">我要学习</am-btn>
+					</li>
+					<li>
+						<am-btn type="stroke" imgWidth="25" href="https://github.com/amjs-team/amaple" target="_blank" leftBg="#fac5b6" img="images/icon-gh.png">GitHub</am-btn>
+					</li>
+				</ul>
 			</div>
 		</div>
 		<div class="index-bd">
@@ -45,35 +47,36 @@
 					</li>
 				</ul>
 			</div>
+			<div class="border-bottom separator-visible"></div>
 			<div id="am-sample">
 				<ul>
 					<li>
-						<div class="code">
-							<figure class="highlight html"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">module</span> <span class="attr">:title</span>=<span class="string">"Amaple.js"</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">template</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">span</span>&gt;</span>{{<span> </span>greet<span> </span>}}<span class="tag">&lt;/<span class="name">span</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">template</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="javascript">    <span class="keyword">new</span> am.Module ({</span></span><br><span class="line"><span class="javascript">      init: <span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>{</span></span><br><span class="line"><span class="javascript">        <span class="keyword">return</span> { <span class="attr">greet</span>: <span class="string">"hello Amaple"</span> };</span></span><br><span class="line"><span class="undefined">      }</span></span><br><span class="line"><span class="undefined">    });</span></span><br><span class="line"><span class="undefined">  </span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">module</span>&gt;</span></span><br></pre></td></tr></table></figure>
-						</div>
 						<div class="sample-desc">
 							<h2 class="title-color title-size">编写一个简单的模块</h2>
 							<p class="post">而且允许开发者定义任意层级的任意多个模块及子模块。在 <code><\module></code> 中通过<code>:title</code>属性设置模块标题，并且使用简单的<code>{{ }}</code>对DOM数据进行动态绑定。</p>
 						</div>
+						<div class="code">
+							<figure class="highlight html"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">module</span> <span class="attr">:title</span>=<span class="string">"Amaple.js"</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">template</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">span</span>&gt;</span>{{<span> </span>greet<span> </span>}}<span class="tag">&lt;/<span class="name">span</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;/<span class="name">template</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">script</span>&gt;</span><span class="undefined"></span></span><br><span class="line"><span class="javascript">    <span class="keyword">new</span> am.Module ({</span></span><br><span class="line"><span class="javascript">      init: <span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>{</span></span><br><span class="line"><span class="javascript">        <span class="keyword">return</span> { <span class="attr">greet</span>: <span class="string">"hello Amaple"</span> };</span></span><br><span class="line"><span class="undefined">      }</span></span><br><span class="line"><span class="undefined">    });</span></span><br><span class="line"><span class="undefined">  </span><span class="tag">&lt;/<span class="name">script</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">module</span>&gt;</span></span><br></pre></td></tr></table></figure>
+						</div>
 					</li>
 					<li>
+						<div class="sample-desc">
+							<h2 class="title-color title-size">编写一个简单的组件</h2>
+							<p class="post">组件是拥有特定功能的封装块，就像由一堆代码封装成的具有特定功能的函数一样，一个组件有独立的视图、行为及生命周期。<code>am.class</code>用于ES5的类构造，在ES6版本下，你完全可以使用<code>class AmComp extends am.Component</code>替代它。</p>
+						</div>
 						<div class="code">
 							<figure class="highlight javascript"><table><tr><td class="code"><pre><span class="line"><span class="keyword">var</span> AmComp = am.class (<span class="string">"AmComp"</span>).extends (am.Component) ({</span><br><span class="line">  render: <span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>{</span><br><span class="line">    <span class="keyword">this</span>.template (<span class="string">`I'm Amaple`</span>)</span><br><span class="line">    .style ({</span><br><span class="line">      <span class="string">".intro"</span>: { <span class="attr">color</span>: <span class="keyword">this</span>.props.color }</span><br><span class="line">    });</span><br><span class="line">  }</span><br><span class="line">});</span><br></pre></td></tr></table></figure>
 							
 							<figure class="highlight html"><table><tr><td class="code"><pre><span class="line"><span class="comment">&lt;!-- 在模块的template节点中使用 AmComp 组件 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">am-comp</span> <span class="attr">color</span>=<span class="string">"#FFD39B"</span>&gt;</span><span class="tag">&lt;/<span class="name">am-comp</span>&gt;</span></span><br></pre></td></tr></table></figure>
 						</div>
-						<div class="sample-desc">
-							<h2 class="title-color title-size">编写一个简单的组件</h2>
-							<p class="post">组件是拥有特定功能的封装块，就像由一堆代码封装成的具有特定功能的函数一样，一个组件有独立的视图、行为及生命周期。<code>am.class</code>用于ES5的类构造，在ES6版本下，你完全可以使用<code>class AmComp extends am.Component</code>替代它。</p>
-						</div>
 					</li>
 					<li>
-						<div class="code">
-							<figure class="highlight html"><table><tr><td class="code"><pre><span class="line"><span class="comment">&lt;!-- 模块跳转更新 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">a</span> <span class="attr">href</span>=<span class="string">"aboutAmjs"</span>&gt;</span>关于Amaple<span class="tag">&lt;/<span class="name">a</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- 表单提交 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">form</span> <span class="attr">action</span>=<span class="string">"save_email"</span> <span class="attr">method</span>=<span class="string">"action"</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">"text"</span> <span class="attr">name</span>=<span class="string">"email"</span> /&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">"file"</span> <span class="attr">name</span>=<span class="string">"photo"</span> /&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">form</span>&gt;</span></span><br></pre></td></tr></table></figure>
-						</div>
 						<div class="sample-desc">
 							<h2 class="title-color title-size">模块跳转与表单提交</h2>
 							<p class="post">看上去是不是非常眼熟？Amaple的模块跳转就是这么简单，只要<code>href</code>属性和<code>form元素</code>的<code>action</code>的路径能在路由配置中找到，它就会进行无刷新跳转。并且当表单中使用上传图片时，你也不需要设置<code>enctype="multipart/form-data"</code>。</p>
+						</div>
+						<div class="code">
+							<figure class="highlight html"><table><tr><td class="code"><pre><span class="line"><span class="comment">&lt;!-- 模块跳转更新 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">a</span> <span class="attr">href</span>=<span class="string">"aboutAmjs"</span>&gt;</span>关于Amaple<span class="tag">&lt;/<span class="name">a</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- 表单提交 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">form</span> <span class="attr">action</span>=<span class="string">"save_email"</span> <span class="attr">method</span>=<span class="string">"action"</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">"text"</span> <span class="attr">name</span>=<span class="string">"email"</span> /&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">input</span> <span class="attr">type</span>=<span class="string">"file"</span> <span class="attr">name</span>=<span class="string">"photo"</span> /&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">form</span>&gt;</span></span><br></pre></td></tr></table></figure>
 						</div>
 					</li>
 				</ul>
@@ -95,7 +98,7 @@
 			overflow: hidden;
 			height: 500px;
 			background: url(images/bg-img.png) no-repeat;
-			background-size: contain;
+			background-size: auto 100%;
 			background-color: #f8f8f8;
 		}
 		.index-bd {
@@ -121,43 +124,48 @@
 		}
 		.btn-wrap {
 			text-align: center;
-			margin-top: 56px;
+			margin-top: 50px;
 		}
-		.btn-wrap span {
+		.btn-wrap li {
+			display: inline-block;
 			margin: 0 18px;
 		}
 		#elementary-dev {
 			text-align: center;
-			margin: 60px 0;
+			margin: 60px 20px;
 		}
 		#elementary-dev p {
 			margin-top: 15px;
 		}
 		#elementary-dev div {
-			margin-top: 42px;
+			margin-top: 35px;
 		}
 		#am-feature {
 			overflow: hidden;
-			margin-top: 100px;
+			margin: 70px 20px 0 20px;
 		}
 		#am-feature li {
 			width: 23%;
 			margin-right: 2%;
 			float: left;
 		}
+		.separator-visible {
+			display: none;
+		}
 		#am-sample {
 			margin-top: 100px;
 			overflow: hidden;
 		}
-		.code {
-			width: 60%;
-			float: left;
-			margin-bottom: 15px;
-		}
 		.sample-desc {
 			width: 35%;
-			float: right;
+			float: left;
+			display: inline-block;
 			margin-top: 20px;
+		}
+		.code {
+			width: 60%;
+			display: inline-block;
+			margin-bottom: 15px;
 		}
 		#try-now {
 			margin-top: 85px;
@@ -165,6 +173,61 @@
 		}
 		#try-now h2 {
 			margin-bottom: 35px;
+		}
+		@media screen and (max-width: 768px) {
+			.index-hd {
+				height: 450px;
+			}
+			.index-bd {
+				width: auto;
+			}
+			.text-am {
+				width: 100%;
+				margin-top: 125px;
+			}
+			.text-am img {
+				width: 65%;
+				margin-bottom: 20px;
+			}
+			.text-am strong {
+				color: #fbd3b7;
+				font-size: 20px;
+				font-weight: bold;
+			}
+			.btn-wrap {
+				margin-top: 70px;
+			}
+			.btn-wrap li {
+				margin: 8px;
+			}
+			#am-feature li {
+				width: auto;
+				margin-bottom: 40px;
+			}
+			.separator-visible {
+				display: block;
+			}
+			#am-sample {
+				margin-top: 15px;
+			}
+			#am-sample li {
+				margin-bottom: 40px;
+			}
+			.sample-desc {
+				width: auto;
+				display: inline-block;
+				margin: 20px;
+			}
+			.code {
+				width: auto;
+				display: block;
+			}
+			#try-now {
+				margin-top: 20px;
+			}
+			#try-now h2 {
+				margin-bottom: 15px;
+			}
 		}
 	</style>
 </module>

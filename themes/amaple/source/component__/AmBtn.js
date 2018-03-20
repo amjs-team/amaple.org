@@ -13,14 +13,15 @@ am.class ( "AmBtn" ).extends ( am.Component ) ( {
 	},
 	render: function () {
 		var amBtn = {
-			padding: "13px 24px",
+			padding: "8px 24px",
 			"text-align": "center",
 			"border-radius": 25,
 			"box-sizing": "border-box",
+			display: "inline-block",
 		};
 
 		if ( this.state.type === "stroke" ) {
-			amBtn.border = "solid 3px " + this.state.leftBg;
+			amBtn.border = "solid 2px " + this.state.leftBg;
 			amBtn.color = this.state.leftBg;
 		}
 		else {
